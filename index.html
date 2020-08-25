@@ -55,12 +55,12 @@
             overflow-y: scroll;
         }
         h1 {
-            font-size: 3em;
+            font-size: 4em;
             font-weight: 200;
-            line-height: 0.9em;
+            line-height: 0.85em;
             letter-spacing: -0.1em;
             text-transform: uppercase;
-            margin: -0.06em 0 0 -0.06em;
+            margin: -0.07em 0 0 -0.07em;
         }
         p {
             margin: 1em 0;
@@ -178,6 +178,10 @@
             padding: 4rem 2rem;
             text-align: center;
         }
+        #main {
+            width: 100%;
+            height: 100%;
+        }
 
         /* GITHUB CORNER */
         @keyframes octocat-wave {
@@ -213,7 +217,7 @@
 <body class="md">
     <aside>
         <h1><em>Crop</em> Circles</h1>
-        <p>A tool for cropping <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery. <a href="https://github.com/doersino/cropcircles#readme">Learn more…</a></p>
+        <p>A tool for circularly cropping <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery. <a href="https://github.com/doersino/cropcircles#readme">More…</a></p>
 
         <hr>
 
@@ -269,40 +273,99 @@
         <canvas id="main"></canvas>
     </main>
 
+    <img style="display: none;" id="dropped-image">
+
+    <script src="https://code.jquery.com/jquery-latest.js" crossorigin="anonymous"></script>
     <script>
 
-        let canvas = document.getElementById("prec");
+        $('.dropper')
+            .on('dragover', (e) => {
+                e.preventDefault();
+            })
+            .on('drop', (e) => {
+                e.preventDefault();
+                let files = e.originalEvent.dataTransfer.files;
+                if (files.length > 0) {
+                    // TODO error if more than 1 file?
+                    let reader = new FileReader();
+                    reader.onload = (e) => {
+                        // I save the image in an img component in case i want to restore to the initial image (img is hidden)
+                        $("#dropped-image")
+                            .load(() => {
+                                // hide the original image and text in drag area
+                                $(".dropper").hide();
+                                // display the canvas
+                                // TODO display status
+                                // draw canvas
+                                drawDroppedImage();
+                            })
+                            .attr("src", e.target.result);
+                    };
+                    reader.readAsDataURL(files[0]);
+                }
+            });
 
-        // set height and width correctly on retina devices
-        // w, h: logical pixels
-        // W, H: physical pixels
-        var w = canvas.offsetWidth;
-        var h = canvas.offsetHeight;
-        var dpr = 1;
-        var W, H;
-        if (window.devicePixelRatio) {
-            dpr = window.devicePixelRatio;
-            canvas.style.width = w + "px";
-            canvas.style.height = h + "px";
-            W = w * dpr;
-            H = h * dpr;
+        function initCanvas(elem) {
+
+            // set height and width correctly on retina devices
+            // w, h: logical pixels
+            // W, H: physical pixels
+            var w = elem.offsetWidth;
+            var h = elem.offsetHeight;
+            var dpr = 1;
+            var W, H;
+            if (window.devicePixelRatio) {
+                dpr = window.devicePixelRatio;
+                elem.style.width = w + "px";
+                elem.style.height = h + "px";
+                W = w * dpr;
+                H = h * dpr;
+            }
+            elem.setAttribute("width", W);
+            elem.setAttribute("height", H);
+
+            return {
+                elem: elem,
+                ctx: elem.getContext("2d"),
+                w: w,
+                h: h,
+                W: W,
+                H: H
+            }
         }
-        canvas.setAttribute("width", W);
-        canvas.setAttribute("height", H);
 
-        var c = canvas.getContext("2d");
-        c.beginPath();
-        c.moveTo(W/3, 0);
-        c.lineTo(W/3, H);
-        c.moveTo(2*W/3, 0);
-        c.lineTo(2*W/3, H);
-        c.moveTo(0, H/3);
-        c.lineTo(W, H/3);
-        c.moveTo(0, 2*H/3);
-        c.lineTo(W, 2*H/3);
-        c.lineWidth = 1;
-        c.strokeStyle = "#fff";
-        c.stroke();
+        let prec = document.getElementById("prec");
+        let pcanv = initCanvas(prec);
+        let pc = pcanv.ctx;
+        let W = pcanv.W;
+        let H = pcanv.H;
+
+        let main = document.getElementById("main");
+        let mcanv = initCanvas(main);
+        let mc = mcanv.ctx;
+        // TODO do the init after the the image has been dropped?
+
+        function drawDroppedImage() {
+            var image = document.getElementById("dropped-image");
+            main.width = image.width;
+            main.height = image.height;
+            // TODO also update w, h etc.?
+            mc.drawImage(image, 0, 0, image.width, image.height);
+            // TODO get the aspect ratio right
+        }
+
+        pc.beginPath();
+        pc.moveTo(W/3, 0);
+        pc.lineTo(W/3, H);
+        pc.moveTo(2*W/3, 0);
+        pc.lineTo(2*W/3, H);
+        pc.moveTo(0, H/3);
+        pc.lineTo(W, H/3);
+        pc.moveTo(0, 2*H/3);
+        pc.lineTo(W, 2*H/3);
+        pc.lineWidth = 1;
+        pc.strokeStyle = "#fff";
+        pc.stroke();
         // TODO divide into 9 views: center and edges. draw at full res (i.e. draw pixels as 2x2 on @2x)
 
 
@@ -328,18 +391,7 @@
         // set font size and restore settings from local storage
         function setup() {
 
-            // set font size based on what markdeep decides to use for diagrams
-            var dummyDiagram = document.querySelector("svg.diagram");
-            var fontStack = window.getComputedStyle(dummyDiagram).getPropertyValue("font-family");
-            var fontSize = window.getComputedStyle(dummyDiagram).getPropertyValue("font-size");
-            document.documentElement.style.setProperty("--font-stack", fontStack);
-            document.documentElement.style.setProperty("--font-size", fontSize);
-
             // restore state from local storage
-            if (inputSource = window.localStorage.getItem("input-source")) {  // purposefully not catching the empty case
-                input.value = inputSource;
-                render();
-            }
             if (darkMode = window.localStorage.getItem("dark-mode")) {
                 darkModeCheckbox.checked = darkMode == "dark";
                 toggleDarkMode(darkModeCheckbox);
@@ -359,148 +411,12 @@
         }
         setup();
 
-        // take input and convert it to a diagram, superimpose that on the input
-        function render() {
-            setStatus("Saving and rendering preview...")
-
-            var inputSource = input.value;
-            window.localStorage.setItem("input-source", inputSource);
-            var diagramSource = window.markdeep.formatDiagram(inputSource);
-            output.innerHTML = diagramSource;
-        }
-
         function togglePreview(checkbox) {
             if (checkbox.checked) {
                 output.style.display = "block";
             } else {
                 output.style.display = "none";
             }
-        }
-
-        // copy source (optionally with Markdeep diagram marker asterisks) to the clipboard
-        function copySource(button, withAsterisks = true) {
-            setStatus("Copying to the clipboard...")
-            //setStatus("Copying to the clipboard" + (withAsterisks ? " (with asterisks)" : "") + "...")
-
-            // make a backup of the current value (if withAsterisks is true, we'll eventually need to restore this)
-            var inputSourceBackup = input.value;
-
-            if (withAsterisks) {
-                var lines = input.value.split("\n");
-
-                // determine length of longest line
-                var longestLineLength = 0;
-                lines = lines.map(function(line) {
-                    line = line.replace("\n", "");
-                    if (line.length > longestLineLength) {
-                        longestLineLength = line.length;
-                    }
-                    return line;
-                });
-
-                // pad with spaces and insert leading and trailing asterisks
-                lines = lines.map(line => "* " + line.padEnd(longestLineLength, " ") + " *");
-
-                // insert top and bottom rows of asterisks
-                var topBottom = "*".repeat(longestLineLength + 4);
-                lines.splice(0, 0, topBottom);
-                lines.push(topBottom);
-
-                input.value = lines.join("\n");
-            }
-
-            input.focus();
-            input.select();
-
-            var successful = false;
-            try {
-                successful = document.execCommand("copy");
-            } catch (err) {
-                console.log("Unable to copy to clipboard: " + err);
-            }
-
-            button.querySelector("b").innerHTML = successful ? "✅" : "❌";
-            setTimeout(function() {
-                button.querySelector("b").innerHTML = "";
-            }, 1000);
-
-            // restore backup
-            input.value = inputSourceBackup;
-        }
-
-        function downloadSVG() {
-            setStatus("Preparing SVG for download...")
-            var diagramElement = output.querySelector("svg");
-
-            // extract computed values for properties that Markdeep determines dynamically
-            var computedStyle = window.getComputedStyle(diagramElement);
-            var computedFontFamily = computedStyle.getPropertyValue("font-family");
-            var computedFontSize = computedStyle.getPropertyValue("font-size");
-            var computedStrokeWidth = computedStyle.getPropertyValue("stroke-width");
-
-            // make a copy of the rendered diagram and apply both extracted "dynamic" styles and "static" styles from the Markdeep source code (version 1.09 – might need updating in the future)
-            var clonedDiagramElement = diagramElement.cloneNode(true);
-            clonedDiagramElement.style += `
-                display: block;
-                font-family: ${computedFontFamily};
-                font-size: ${computedFontSize};
-                text-align: center;
-                stroke-linecap: round;
-                stroke-width: ${computedStrokeWidth};
-                page-break-inside: avoid;
-                stroke: #000;
-                fill: #000;
-            `;
-
-            clonedDiagramElement.querySelectorAll(".opendot").forEach(n => {
-                n.style.setProperty("fill", "#fff");  // weirdly, extending n.style using the += operator doesn't seem to work here
-            });
-            clonedDiagramElement.querySelectorAll(".shadeddot").forEach(n => {
-                n.style.setProperty("fill", "#ccc");
-            });
-            clonedDiagramElement.querySelectorAll(".dotteddot").forEach(n => {
-                n.style.setProperty("stroke", "#000");
-                n.style.setProperty("stroke-dasharray", "4");
-                n.style.setProperty("fill", "none");
-            });
-            clonedDiagramElement.querySelectorAll("text").forEach(n => {
-                n.style.setProperty("stroke", "none");
-            });
-
-            // for convenience, set the viewBox attribute based on the width and height attributes (which are now redundant, so let's remove them)
-            var w = clonedDiagramElement.getAttribute("width"),
-                h = clonedDiagramElement.getAttribute("height");
-            clonedDiagramElement.removeAttribute("width");
-            clonedDiagramElement.removeAttribute("height");
-            clonedDiagramElement.setAttribute("viewBox", "0 0 " + w + " " + h);
-
-            // include the Markdeep diagram source code
-            var inputSource = input.value;
-            var inputSourceElement = document.createElement("metadata");
-            inputSourceElement.innerHTML = inputSource;
-            clonedDiagramElement.appendChild(inputSourceElement);
-
-            // get thusly adjusted diagram source and indent it nicely, based on https://stackoverflow.com/a/49458964
-            var diagramSource = clonedDiagramElement.outerHTML;
-            var formatted = "",
-                indent = "";
-            diagramSource.split(/>\s*</).forEach(function(node) {
-                if (node.match(/^\/\w/)) indent = indent.substring(2);
-                formatted += indent + "<" + node + ">\n";
-                if (node.match(/^<?\w[^>]*[^\/]$/)) indent += "  ";
-            });
-            diagramSource = formatted.substring(1, formatted.length-2);
-
-            // write diagram source to an invisible link's target, then click that link to initiate download, based on https://stackoverflow.com/a/18197341
-            var dummyLink = document.createElement("a");
-            dummyLink.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(diagramSource));
-            dummyLink.setAttribute("download", "diagram.svg");
-            dummyLink.style.display = "none";
-            document.body.appendChild(dummyLink);
-
-            dummyLink.click();
-
-            document.body.removeChild(dummyLink);
         }
 
         function toggleDarkMode(checkbox) {
