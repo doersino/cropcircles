@@ -13,7 +13,7 @@
             --font-size: 14px;
             --font-stack: "Iosevka Aile Web", monospace;
 
-            --sidebar-width: 16rem;
+            --sidebar-width: 18rem;
             --sidebar-background-color: #222;
 
             --status-background-color: #444;
@@ -48,7 +48,7 @@
         }
 
         /* SIDEBAR */
-        aside {
+        .sidebar {
             width: var(--sidebar-width);
             background-color: var(--sidebar-background-color);
             padding: 1em;
@@ -158,7 +158,7 @@
         }
 
         /* PRECISION HELPER */
-        section {
+        .precision-helper {
             position: fixed;
             width: var(--sidebar-width);
             height: var(--sidebar-width);
@@ -166,7 +166,7 @@
             right: 0;
             background-color: var(--precision-helper-background-color);
         }
-        section canvas {
+        .precision-helper canvas {
             width: 100%;
             height: 100%;
         }
@@ -174,7 +174,8 @@
         /* CROPPING VIEW */
         main {
             width: calc(100vw - var(--sidebar-width));
-            height: 100vh;
+            min-width: calc(100vw - var(--sidebar-width));
+            min-height: 100vh;
             background: repeating-linear-gradient(
                 -42deg,
                 #080808,
@@ -200,11 +201,11 @@
             font-weight: 500;
             letter-spacing: -0.05em;
         }
-        #main {
+        #dropped-image {
+            display: none;
+        }
+        #work {
             display: block;
-            /*margin: auto;*/
-            /*max-width: 100%;
-            max-height: 100%;*/
         }
 
         /* GITHUB CORNER */
@@ -239,26 +240,19 @@
         }
     </style>
 </head>
-<body class="md">
-    <aside>
+<body>
+    <aside class="sidebar">
         <h1><em>Crop</em> Circles</h1>
-        <p>A tool for circularly cropping <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery. <a href="https://github.com/doersino/cropcircles#readme">More…</a></p>
+        <p>A tool for cropping <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery. <a href="https://github.com/doersino/cropcircles#readme">Learn more…</a></p>
 
-        TODO make more link pop up an explanatory window thingy? with keeb shortcuts, etc.
+        <span><strong>Usage:</strong> Drop an image into the main area. Click and drag from a center point to make a circular selection. Keeping an eye on the precision helper in the bottom right, adjust the selection via the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd>; you can zoom in or out via <kbd>+</kbd> and <kbd>-</kbd>. Press <kbd>shift</kbd> to adjust in larger increments. Finally, press <kbd>enter</kbd> to accept the selected circle.</span>
 
         <hr>
 
-        click and drag from the center to select a circle.
-        adjust via the arrow keys or wasd, zoom in or out via <kbd>+</kbd> and <kbd>-</kbd>. press <kbd>shift</kbd> to adjust in larger increments.
-        press enter to finish the circle
+        <label><input type="checkbox" onclick="TODO(this);" checked> show old selections</label>
+        <span>Show previously selected circles to help you keep track of what you've already done.</span>
 
-        TODO checkbox: show already-done circles in main view?
-        TODO checkbox: collect in local storage for later zipping or download each circle immediately? then will need a dl button
-
-        <label><input type="checkbox" onclick="togglePreview(this);" checked> show preview</label>
-        <span>Hides or shows the superimposed preview.</span>
-
-        <button onclick="copySource(this);">copy source<b></b></button>
+        <!--<button onclick="copySource(this);">copy source<b></b></button>
         <span>The copied source will be surrounded with asterisks, ready for pasting into a Markdeep document.</span>
 
         <input type="text" placeholder="Location">
@@ -285,14 +279,16 @@
             <input type="range" min="-0.30" max="0.45" step="0.01" value="0.15" data-default="0.15" class="letter-spacing-slider" oninput="adjustLetterSpacing(this.value)">
             <br>letter spacing <b>0.15px</b>
         </label>
-        <span>Both of the above might need adjusting depending on your zoom level, browser and installed fonts.</span>
+        <span>Both of the above might need adjusting depending on your zoom level, browser and installed fonts.</span>-->
+
+        <hr>
 
         <p><span><em>Your source and these settings are continually written to local storage. They will be restored when you close and reopen this page.</em></span></p>
         <a class="reset" href="javascript:resetSettings();">reset settings</a>
     </aside>
-    <section>
+    <aside class="precision-helper">
         <canvas id="prec"></canvas>
-    </section>
+    </aside>
     <footer class="hidden"></footer>
     <main>
         <div class="dropper">
@@ -300,7 +296,8 @@
                 Drop image here
             </div>
         </div>
-        <canvas id="main"></canvas>
+        <img id="dropped-image">
+        <canvas id="work"></canvas>
     </main>
 
     <img style="display: none;" id="dropped-image">
@@ -308,7 +305,7 @@
     <script src="https://code.jquery.com/jquery-latest.js" crossorigin="anonymous"></script>
     <script>
 
-        $('#main').hide();
+        $('#work').hide();
 
         $('.dropper')
             .on('dragover', (e) => {
@@ -326,7 +323,7 @@
                             .load(() => {
                                 // hide the original image and text in drag area
                                 $(".dropper").hide();
-                                $('#main').show();
+                                $('#work').show();
                                 // display the canvas
                                 // TODO display status
                                 // draw canvas
@@ -372,15 +369,17 @@
         let pc = pcanv.ctx;
         let W = pcanv.W;
         let H = pcanv.H;
+        let w = pcanv.w;
+        let h = pcanv.h;
 
-        let main = document.getElementById("main");
-        let mc = main.getContext("2d");
+        let work = document.getElementById("work");
+        let mc = work.getContext("2d");
         // TODO do the init after the the image has been dropped?
 
         function drawDroppedImage() {
             var image = document.getElementById("dropped-image");
-            main.width = image.width;
-            main.height = image.height;
+            work.width = image.width;
+            work.height = image.height;
             $("main").width(image.width + $("aside").outerWidth());
             $("main").height(image.height);
             // TODO also update w, h etc.?
@@ -389,38 +388,74 @@
         }
 
         function redrawCurrentImage(image) {
-            main.width = image.width;
-            main.height = image.height;
+            work.width = image.width;
+            work.height = image.height;
             // TODO also update w, h etc.?
             mc.drawImage(image, 0, 0, image.width, image.height);
             // TODO get the aspect ratio right
         }
 
-        pc.beginPath();
-        pc.moveTo(W/3, 0);
-        pc.lineTo(W/3, H);
-        pc.moveTo(2*W/3, 0);
-        pc.lineTo(2*W/3, H);
-        pc.moveTo(0, H/3);
-        pc.lineTo(W, H/3);
-        pc.moveTo(0, 2*H/3);
-        pc.lineTo(W, 2*H/3);
         pc.lineWidth = 1;
         pc.strokeStyle = "#fff";
-        pc.stroke();
+        function updatePrec(x, y, r) {
+            pc.clearRect(0, 0, W, H);
+
+            if (x) {
+                var image = document.getElementById("dropped-image");
+
+                // center
+                pc.drawImage(image, x - w/6, y - h/6, w/3, h/3, W/3, H/3, W/3, H/3);
+                pc.beginPath();
+                pc.moveTo(W/2-W/18, H/2);
+                pc.lineTo(W/2+W/18, H/2);
+                pc.moveTo(W/2, H/2-W/18);
+                pc.lineTo(W/2, H/2+W/18);
+                pc.stroke();
+
+                // top
+                pc.drawImage(image, x - w/6, y - r - h/6, w/3, h/3, W/3, 0, W/3, H/3);
+                pc.save();
+                pc.beginPath();
+                pc.rect(W/3, 0, W/3, H/3);
+                pc.closePath();
+                pc.clip();
+                pc.beginPath();
+                pc.arc(W/2, H/6 + r, r, 0, 2 * Math.PI);
+                pc.stroke();
+                pc.restore();
+            }
+
+            pc.beginPath();
+            pc.moveTo(W/3, 0);
+            pc.lineTo(W/3, H);
+            pc.moveTo(2*W/3, 0);
+            pc.lineTo(2*W/3, H);
+            pc.moveTo(0, H/3);
+            pc.lineTo(W, H/3);
+            pc.moveTo(0, 2*H/3);
+            pc.lineTo(W, 2*H/3);
+            pc.lineWidth = 2;
+            pc.strokeStyle = "#fff";
+            pc.stroke();
+        }
+        updatePrec(null, null, null);
         // TODO divide into 9 views: center and edges. draw at full res (i.e. draw pixels as 2x2 on @2x)
 
 
         var started = false;
-        var canvas = $("#main")[0];
+        var canvas = $("#work")[0];
         var context = canvas.getContext("2d");
-        var position = $("#main").offset();
+        var position = $("#work").offset();
         var image;
         var startX = 0;
         var startY = 0;
+        var x = 0;
+        var y = 0;
+        var r = 0;
 
+        var circs = [];
 
-        $("#main")
+        $("#work")
             .mousedown((event) => {
                 startX = event.pageX - position.left;
                 startY = event.pageY - position.top;
@@ -432,18 +467,14 @@
                 if (started) {
                     redrawCurrentImage(image);
 
-                    var x = event.pageX - position.left;
-                    var y = event.pageY - position.top;
+                    x = event.pageX - position.left;
+                    y = event.pageY - position.top;
 
                     var dy = Math.abs(y - startY);
                     var dx = Math.abs(x - startX);
-                    var r = Math.max(dx, dy);
-                    var l = Math.atan(dx/dy);
-                    // TODO actuall get this right: get angle, then properly compute radius based on mouse pos
-                    console.log(l);
+                    r = Math.sqrt(dx ** 2 + dy ** 2);
 
                     context.arc(startX, startY, r, 0, 2 * Math.PI);
-                    context.arc(startX, startY, r*l, 0, 2 * Math.PI);
                     context.moveTo(startX-r/10, startY-r/10);
                     context.lineTo(startX+r/10, startY+r/10);
                     context.moveTo(startX-r/10, startY+r/10);
@@ -453,12 +484,14 @@
                     context.stroke();
 
                     // TODO store definition of cirle: xstart, ystart, r
+                    updatePrec(startX, startY, r);
 
                 }
             })
             .mouseup((event) => {
                 if (started) {
                     started = false;
+                    circs.push({x: startX, y: startX, r: r});
                 }
             });
 
