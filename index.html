@@ -31,6 +31,8 @@
             --input-border-color: #555;
             --input-hover-background-color: #555;
             --input-hover-border-color: #888;
+            --input-focused-background-color: #888;
+            --input-placeholder-color: #777;
             --input-current-value-color: #aaa;
 
             --dropper-background-color: #555;
@@ -85,7 +87,7 @@
             padding: 0 0.2rem;
             border-radius: 0.2rem
         }
-        button, label {
+        button, label, input[type="text"] {
             font: inherit;
             color: inherit;
             background-color: var(--input-background-color);
@@ -98,7 +100,7 @@
             text-transform: uppercase;
             border-radius: 0.2rem
         }
-        button:hover, label:hover {
+        button:hover, label:hover, input[type="text"]:hover {
             background-color: var(--input-hover-background-color);
             border-color: var(--input-hover-border-color);
         }
@@ -110,6 +112,16 @@
         input[type="range"] {
             width: 100%;
             margin: 0;
+            margin-bottom: 0.3em;
+        }
+        input[type="text"]::placeholder {
+            color: var(--input-placeholder-color);
+        }
+        input[type="text"]:focus,
+        button:active {
+            border-color: var(--input-focused-background-color);
+            background-color: var(--input-focused-background-color);
+            outline: none;
         }
         label b {
             font-weight: normal;
@@ -164,12 +176,11 @@
             width: calc(100vw - var(--sidebar-width));
             height: 100vh;
             background: repeating-linear-gradient(
-  -42deg,
-  #080808,
-  #080808 13px,
-  #181818 13px,
-  #181818 20px
-);
+                -42deg,
+                #080808,
+                #080808 13px,
+                #181818 13px,
+                #181818 20px);
         }
         .dropper {
             padding: 1px; /* fix for margin weirdness */
@@ -246,6 +257,9 @@
         <span>Hides or shows the superimposed preview.</span>
 
         <button onclick="copySource(this);">copy source<b></b></button>
+        <span>The copied source will be surrounded with asterisks, ready for pasting into a Markdeep document.</span>
+
+        <input type="text" placeholder="Location">
         <span>The copied source will be surrounded with asterisks, ready for pasting into a Markdeep document.</span>
 
         <button onclick="downloadSVG();">download svg<b></b></button>
