@@ -13,7 +13,7 @@
             --font-size: 14px;
             --font-stack: "Iosevka Aile Web", monospace;
 
-            --sidebar-width: 18rem;
+            --sidebar-width: 20rem;
             --sidebar-background-color: #222;
 
             --status-background-color: #444;
@@ -258,6 +258,8 @@
 
         <label><input type="checkbox" onclick="TODO(this);" checked> show old selections</label>
         <span>Show previously selected circles to help you keep track of what you've already done.</span>
+
+        TODO dropdown for background color: transparent, black, white
 
         <!--<button onclick="copySource(this);">copy source<b></b></button>
         <span>The copied source will be surrounded with asterisks, ready for pasting into a Markdeep document.</span>
@@ -544,9 +546,8 @@
                 pc.stroke();
                 pc.restore();
 
-                // TODO more
-                // TODO drop image here ...or use example
-                // TODO then, implement:
+                // TODO now, implement:
+                // * move stuff to render function based image, old circles, current circle
                 // * keeping around of old circles in an organized manner, and visually distinct from current cirle (fill? gray?)
                 // * adjustments of circles via keyboard and acceptance
                 // * the actual cropping and downloading of images upon acceptance
@@ -554,6 +555,8 @@
                 // * stroke colors from css variables, or js variables
                 // * code cleanup
                 // * stauts message: optionally, persist until cleared?
+                // * think of more useful settings and actually store them in local storage
+                // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice
             }
 
             pc.beginPath();
@@ -566,7 +569,7 @@
             pc.moveTo(0, 2*H/3);
             pc.lineTo(W, 2*H/3);
             pc.lineWidth = 2;
-            pc.strokeStyle = "#fff";
+            pc.strokeStyle = "#555";
             pc.stroke();
         }
         updatePrec(null, null, null);
@@ -606,12 +609,14 @@
                     var dx = Math.abs(x - startX);
                     r = Math.sqrt(dx ** 2 + dy ** 2);
 
+                    context.setLineDash([6*dpr, 4*dpr]);
                     context.arc(startX * dpr, startY * dpr, r * 2, 0, 2 * Math.PI);
                     context.moveTo(startX * dpr, startY * dpr);
                     context.lineTo(x * dpr, y * dpr);
                     context.lineWidth = 2;
                     context.strokeStyle = "#fff";
                     context.stroke();
+                    context.setLineDash([]);
 
                     // TODO store definition of cirle: xstart, ystart, r
                     updatePrec(startX * dpr / scale, startY * dpr / scale, r * dpr / scale);
