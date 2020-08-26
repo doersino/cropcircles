@@ -13,7 +13,7 @@
             --font-size: 14px;
             --font-stack: "Iosevka Aile Web", monospace;
 
-            --sidebar-width: 20rem;
+            --sidebar-width: 18rem;
             --sidebar-background-color: #222;
 
             --status-background-color: #444;
@@ -154,7 +154,7 @@
         }
         footer.hidden {
             opacity: 0;
-            transition: opacity 1s ease-out;
+            transition: opacity 0.5s ease-out;
         }
 
         /* PRECISION HELPER */
@@ -256,10 +256,10 @@
 
         <hr>
 
-        <label><input type="checkbox" onclick="TODO(this);" checked> show old selections</label>
+        <label><input type="checkbox" class="show-old-selections-checkbox" data-default="yes" onclick="toggleShowOldSelections(this);" checked> show old selections</label>
         <span>Show previously selected circles to help you keep track of what you've already done.</span>
 
-        TODO dropdown for background color: transparent, black, white
+        TODO dropdown for background color: transparent, black, white, image content
 
         <!--<button onclick="copySource(this);">copy source<b></b></button>
         <span>The copied source will be surrounded with asterisks, ready for pasting into a Markdeep document.</span>
@@ -323,7 +323,7 @@
             })
             .on('drop', (e) => {
                 e.preventDefault();
-                setStatus("Setting up image...")
+                setStatus("Setting up image...", true)
                 let files = e.originalEvent.dataTransfer.files;
                 if (files.length > 0) {
                     // TODO error if more than 1 file?
@@ -339,6 +339,8 @@
                                 // TODO display status
                                 // draw canvas
                                 drawDroppedImage();
+                                clearStatus();
+
                             })
                             .attr("src", e.target.result);
                     };
@@ -349,7 +351,7 @@
         $('.load-sample')
             .on('click', (e) => {
                 e.preventDefault();
-                setStatus("Setting up image...")
+                setStatus("Setting up image...", true)
                 $("#dropped-image")
                     .load(() => {
                         // hide the original image and text in drag area
@@ -359,6 +361,7 @@
                         // TODO display status
                         // draw canvas
                         drawDroppedImage();
+                        clearStatus();
                     })
                     .attr("src", "sample.jpg");
             });
@@ -406,7 +409,7 @@
 
         let work = document.getElementById("work");
         let wcanv = initCanvas(work);
-        let mc = work.getContext("2d");
+        let wc = work.getContext("2d");
         let scale = 1;
         // TODO do the init after the the image has been dropped?
 
@@ -415,7 +418,7 @@
             var scaleX = work.width / image.width;
             var scaleY = work.height / image.height;
             scale = Math.min(scaleX, scaleY);
-            mc.drawImage(image, 0, 0, image.width, image.height, 0, 0, scale * image.width, scale * image.height);
+            wc.drawImage(image, 0, 0, image.width, image.height, 0, 0, scale * image.width, scale * image.height);
             // TODO get the aspect ratio right
         }
 
@@ -423,7 +426,7 @@
             work.width = image.width;
             work.height = image.height;
             // TODO also update w, h etc.?
-            mc.drawImage(image, 0, 0, image.width, image.height);
+            wc.drawImage(image, 0, 0, image.width, image.height);
             // TODO get the aspect ratio right
         }
 
@@ -547,15 +550,14 @@
                 pc.restore();
 
                 // TODO now, implement:
-                // * move stuff to render function based image, old circles, current circle
+                // * move stuff to render function based on image, old circles, current circle
                 // * keeping around of old circles in an organized manner, and visually distinct from current cirle (fill? gray?)
                 // * adjustments of circles via keyboard and acceptance
                 // * the actual cropping and downloading of images upon acceptance
                 // * maybe a list in the sidebar, with a re-download possibility
                 // * stroke colors from css variables, or js variables
                 // * code cleanup
-                // * stauts message: optionally, persist until cleared?
-                // * think of more useful settings and actually store them in local storage
+                // * think of additional, more useful settings
                 // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice
             }
 
@@ -577,8 +579,6 @@
 
 
         var started = false;
-        var canvas = $("#work")[0];
-        var context = canvas.getContext("2d");
         var position = null;  // not valid yet
         var image;
         var startX = 0;
@@ -596,7 +596,8 @@
                 startY = event.pageY - position.top;
                 started = true;
                 image = new Image;
-                image.src = canvas.toDataURL("image/png");
+                image.src = work.toDataURL("image/png");  // TODO this isn't fast – might another format be better?
+                // TODO or, alternatively, draw input image on a separate layer/canvas behind programmatic stuff? since it doesn't ever actually change
             })
             .mousemove((event) => {
                 if (started) {
@@ -609,14 +610,14 @@
                     var dx = Math.abs(x - startX);
                     r = Math.sqrt(dx ** 2 + dy ** 2);
 
-                    context.setLineDash([6*dpr, 4*dpr]);
-                    context.arc(startX * dpr, startY * dpr, r * 2, 0, 2 * Math.PI);
-                    context.moveTo(startX * dpr, startY * dpr);
-                    context.lineTo(x * dpr, y * dpr);
-                    context.lineWidth = 2;
-                    context.strokeStyle = "#fff";
-                    context.stroke();
-                    context.setLineDash([]);
+                    wc.setLineDash([6*dpr, 4*dpr]);
+                    wc.arc(startX * dpr, startY * dpr, r * 2, 0, 2 * Math.PI);
+                    wc.moveTo(startX * dpr, startY * dpr);
+                    wc.lineTo(x * dpr, y * dpr);
+                    wc.lineWidth = 2;
+                    wc.strokeStyle = "#fff";
+                    wc.stroke();
+                    wc.setLineDash([]);
 
                     // TODO store definition of cirle: xstart, ystart, r
                     updatePrec(startX * dpr / scale, startY * dpr / scale, r * dpr / scale);
@@ -632,103 +633,48 @@
 
 
         // helper function for displaying status messages
-        function setStatus(message) {
+        function setStatus(message, persist) {
             var status = document.querySelector("footer");
             status.innerHTML = message;
             status.className = "";
-            setTimeout(function () {
-                var status = document.querySelector("footer");
-                status.className = "hidden";
-            }, 200);
+            if (!persist) {
+                setTimeout(clearStatus, 500);
+            }
         }
 
-        var input = document.querySelector("textarea");
-        var output = document.querySelector("figure");
+        function clearStatus() {
+            var status = document.querySelector("footer");
+            status.className = "hidden";
+        }
 
-        var darkModeCheckbox = document.querySelector(".dark-mode-checkbox");
-        var zoomLevelSlider = document.querySelector(".zoom-level-slider");
-        var lineHeightSlider = document.querySelector(".line-height-slider");
-        var letterSpacingSlider = document.querySelector(".letter-spacing-slider");
+        var showOldSelections = true;
+        var showOldSelectionsCheckbox = document.querySelector(".show-old-selections-checkbox");
 
-        // set font size and restore settings from local storage
+        // set up canvases and restore settings from local storage
         function setup() {
 
-            // restore state from local storage
-            if (darkMode = window.localStorage.getItem("dark-mode")) {
-                darkModeCheckbox.checked = darkMode == "dark";
-                toggleDarkMode(darkModeCheckbox);
+            // restore settings from local storage
+            if (showOldSelections = window.localStorage.getItem("show-old-selections")) {
+                showOldSelectionsCheckbox.checked = showOldSelections == "yes";
+                toggleShowOldSelections(showOldSelectionsCheckbox);
             }
-            if (zoomLevel = window.localStorage.getItem("zoom-level")) {
-                zoomLevelSlider.value = zoomLevel;
-                adjustZoomLevel(zoomLevel);
-            }
-            if (lineHeight = window.localStorage.getItem("input-line-height")) {
-                lineHeightSlider.value = lineHeight;
-                adjustLineHeight(lineHeight);
-            }
-            if (letterSpacing = window.localStorage.getItem("input-letter-spacing")) {
-                letterSpacingSlider.value = letterSpacing;
-                adjustLetterSpacing(letterSpacing);
-            }
+
+            // TODO more
         }
         setup();
 
-        function togglePreview(checkbox) {
-            if (checkbox.checked) {
-                output.style.display = "block";
-            } else {
-                output.style.display = "none";
-            }
-        }
-
-        function toggleDarkMode(checkbox) {
-            if (checkbox.checked) {
-                document.documentElement.className = "dark";
-                window.localStorage.setItem("dark-mode", "dark");
-            } else {
-                document.documentElement.className = "light";
-                window.localStorage.setItem("dark-mode", "light");
-            }
-        }
-
-        function adjustZoomLevel(zoomLevel) {
-            document.documentElement.style.setProperty('--zoom-level', zoomLevel);
-            zoomLevelSlider.parentNode.querySelector("b").innerHTML = parseInt(100 * zoomLevel) + "%";
-            window.localStorage.setItem("zoom-level", zoomLevel);
-        }
-
-        function adjustLineHeight(lineHeight) {
-            document.documentElement.style.setProperty('--input-line-height', lineHeight + "em");
-            lineHeightSlider.parentNode.querySelector("b").innerHTML = lineHeight + "em";
-            window.localStorage.setItem("input-line-height", lineHeight);
-        }
-
-        function adjustLetterSpacing(letterSpacing) {
-            document.documentElement.style.setProperty('--input-letter-spacing', letterSpacing + "px");
-            letterSpacingSlider.parentNode.querySelector("b").innerHTML = letterSpacing + "px";
-            window.localStorage.setItem("input-letter-spacing", letterSpacing);
+        function toggleShowOldSelections(checkbox) {
+            showOldSelections = !!checkbox.checked;
+            window.localStorage.setItem("show-old-selections", !!checkbox.checked ? "yes" : "no");
         }
 
         function resetSettings() {
-            darkModeCheckbox.checked = darkModeCheckbox.getAttribute("data-default") == "dark";
-            toggleDarkMode(darkModeCheckbox);
-
-            zoomLevelSlider.value = zoomLevelSlider.getAttribute("data-default");
-            adjustZoomLevel(zoomLevelSlider.value);
-
-            lineHeightSlider.value = lineHeightSlider.getAttribute("data-default");
-            adjustLineHeight(lineHeightSlider.value);
-
-            letterSpacingSlider.value = letterSpacingSlider.getAttribute("data-default");
-            adjustLetterSpacing(letterSpacingSlider.value);
+            showOldSelectionsCheckbox.checked = showOldSelectionsCheckbox.getAttribute("data-default");
+            toggleShowOldSelections(showOldSelectionsCheckbox);
         }
 
         function nukeLocalStorage() {
-            localStorage.removeItem("input-source");
-            localStorage.removeItem("dark-mode");
-            localStorage.removeItem("zoom-level");
-            localStorage.removeItem("input-line-height");
-            localStorage.removeItem("input-letter-spacing");
+            localStorage.removeItem("show-old-selections");
         }
     </script>
 
