@@ -51,6 +51,7 @@
             background-color: var(--sidebar-background-color);
             padding: 1em;
             position: fixed;
+            right: 0;
             height: calc(100% - var(--sidebar-width));
             overflow-y: scroll;
         }
@@ -61,6 +62,7 @@
             letter-spacing: -0.1em;
             text-transform: uppercase;
             margin: -0.07em 0 0 -0.07em;
+            text-align: right;
         }
         p {
             margin: 1em 0;
@@ -129,7 +131,7 @@
         /* STATUS */
         footer {
             position: fixed;
-            left: 0;
+            right: 0;
             bottom: 0;
             width: var(--sidebar-width);
             background-color: var(--status-background-color);
@@ -149,7 +151,7 @@
             width: var(--sidebar-width);
             height: var(--sidebar-width);
             bottom: 0;
-            left: 0;
+            right: 0;
             background-color: var(--precision-helper-background-color);
         }
         section canvas {
@@ -161,11 +163,18 @@
         main {
             width: calc(100vw - var(--sidebar-width));
             height: 100vh;
-            margin-left: var(--sidebar-width);
-            background-color: var(--dropper-background-color);
+            background: repeating-linear-gradient(
+  -42deg,
+  #080808,
+  #080808 13px,
+  #181818 13px,
+  #181818 20px
+);
         }
         .dropper {
             padding: 1px; /* fix for margin weirdness */
+            background-color: var(--dropper-background-color);
+            height: 100%;
         }
         .dropper-text {
             border: 0.4rem dashed var(--dropper-color);
@@ -179,8 +188,10 @@
             text-align: center;
         }
         #main {
-            width: 100%;
-            height: 100%;
+            display: block;
+            margin: auto;
+            max-width: 100%;
+            max-height: 100%;
         }
 
         /* GITHUB CORNER */
@@ -205,7 +216,8 @@
             color: var(--sidebar-background-color);
             position: absolute;
             top: 0;
-            left: calc(var(--sidebar-width) - var(--github-corner-size));
+            transform: rotate(-90deg);
+            right: calc(var(--sidebar-width) - var(--github-corner-size));
             width: var(--github-corner-size);
             height: var(--github-corner-size);
         }
@@ -218,6 +230,8 @@
     <aside>
         <h1><em>Crop</em> Circles</h1>
         <p>A tool for circularly cropping <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery. <a href="https://github.com/doersino/cropcircles#readme">More…</a></p>
+
+        TODO make more link pop up an explanatory window thingy? with keeb shortcuts, etc.
 
         <hr>
 
@@ -278,6 +292,8 @@
     <script src="https://code.jquery.com/jquery-latest.js" crossorigin="anonymous"></script>
     <script>
 
+        $('#main').hide();
+
         $('.dropper')
             .on('dragover', (e) => {
                 e.preventDefault();
@@ -294,6 +310,7 @@
                             .load(() => {
                                 // hide the original image and text in drag area
                                 $(".dropper").hide();
+                                $('#main').show();
                                 // display the canvas
                                 // TODO display status
                                 // draw canvas
@@ -341,8 +358,7 @@
         let H = pcanv.H;
 
         let main = document.getElementById("main");
-        let mcanv = initCanvas(main);
-        let mc = mcanv.ctx;
+        let mc = main.getContext("2d");
         // TODO do the init after the the image has been dropped?
 
         function drawDroppedImage() {
