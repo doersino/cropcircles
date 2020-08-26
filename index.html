@@ -1,7 +1,7 @@
 <html class="light">
 <head>
     <meta charset="utf-8" lang="en">
-    <title>Markdeep Diagram Drafting Board</title>
+    <title>Crop Circles</title>
     <link rel="stylesheet" href="libs/ttf-iosevka-aile-3.4.6/iosevka-aile.css">
     <style>
         * {
@@ -144,7 +144,7 @@
         footer {
             position: fixed;
             right: 0;
-            bottom: 0;
+            bottom: var(--sidebar-width);
             width: var(--sidebar-width);
             background-color: var(--status-background-color);
             padding: 1em;
@@ -154,7 +154,7 @@
         }
         footer.hidden {
             opacity: 0;
-            transition: opacity 0.5s ease-out;
+            transition: opacity 1s ease-out;
         }
 
         /* PRECISION HELPER */
@@ -199,6 +199,12 @@
             text-align: center;
             font-weight: 500;
             letter-spacing: -0.05em;
+        }
+        .load-sample {
+            display: block;
+            font-size: 2rem;
+            margin-top: 1em;
+            cursor: pointer;
         }
         #dropped-image {
             display: none;
@@ -246,7 +252,7 @@
         <h1><em>Crop</em> Circles</h1>
         <p>A tool for cropping <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery. <a href="https://github.com/doersino/cropcircles#readme">Learn more…</a></p>
 
-        <span><strong>Usage:</strong> Drop an image into the main area. Click and drag from a center point to make a circular selection. Keeping an eye on the precision helper in the bottom right, adjust the selection via the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd>; you can zoom in or out via <kbd>+</kbd> and <kbd>-</kbd>. Press <kbd>shift</kbd> to adjust in larger increments. Finally, press <kbd>enter</kbd> to accept the selected circle.</span>
+        <span><strong>Usage:</strong> Drop an image into the main area. Click and drag from a center point to make a circular selection. Keeping an eye on the precision helper in the bottom right, adjust the selection via the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd>; you can zoom in or out via <kbd>+</kbd> and <kbd>-</kbd>. You can press <kbd>shift</kbd> to adjust in 10× larger increments. When satisfied, press <kbd>enter</kbd> to accept the selected circle – it will then download as a PNG image with a transparent background.</span>
 
         <hr>
 
@@ -284,7 +290,7 @@
 
         <hr>
 
-        <p><span><em>Your source and these settings are continually written to local storage. They will be restored when you close and reopen this page.</em></span></p>
+        <p><span><em>These settings are continually written to local storage and will be restored when you close and reopen this page.</em></span></p>
         <a class="reset" href="javascript:resetSettings();">reset settings</a>
     </aside>
     <aside class="precision-helper">
@@ -295,6 +301,7 @@
         <div class="dropper">
             <div class="dropper-text">
                 Drop image here
+                <em class="load-sample">…or <a>load sample</a>.</em>
             </div>
         </div>
         <img id="dropped-image">
@@ -314,6 +321,7 @@
             })
             .on('drop', (e) => {
                 e.preventDefault();
+                setStatus("Setting up image...")
                 let files = e.originalEvent.dataTransfer.files;
                 if (files.length > 0) {
                     // TODO error if more than 1 file?
@@ -334,6 +342,23 @@
                     };
                     reader.readAsDataURL(files[0]);
                 }
+            });
+
+        $('.load-sample')
+            .on('click', (e) => {
+                e.preventDefault();
+                setStatus("Setting up image...")
+                $("#dropped-image")
+                    .load(() => {
+                        // hide the original image and text in drag area
+                        $(".dropper").hide();
+                        //$('#work').show();
+                        // display the canvas
+                        // TODO display status
+                        // draw canvas
+                        drawDroppedImage();
+                    })
+                    .attr("src", "sample.jpg");
             });
 
         function initCanvas(elem) {
@@ -400,10 +425,11 @@
             // TODO get the aspect ratio right
         }
 
-        pc.lineWidth = 1;
-        pc.strokeStyle = "#fff";
         function updatePrec(x, y, r) {
             pc.clearRect(0, 0, W, H);
+
+            pc.lineWidth = 1;
+            pc.strokeStyle = "#fff";
 
             if (x) {
                 var image = document.getElementById("dropped-image");
@@ -411,10 +437,15 @@
                 // center
                 pc.drawImage(image, x - w/6, y - h/6, w/3, h/3, W/3, H/3, W/3, H/3);
                 pc.beginPath();
-                pc.moveTo(W/2-W/18, H/2);
-                pc.lineTo(W/2+W/18, H/2);
-                pc.moveTo(W/2, H/2-W/18);
-                pc.lineTo(W/2, H/2+W/18);
+                pc.moveTo(W/2-W/18, H/2-H/18);
+                pc.lineTo(W/2-W/72, H/2-H/72);
+                pc.moveTo(W/2+W/72, H/2+H/72);
+                pc.lineTo(W/2+W/18, H/2+H/18);
+                pc.moveTo(W/2+W/18, H/2-H/18);
+                pc.lineTo(W/2+W/72, H/2-H/72);
+                pc.moveTo(W/2-W/72, H/2+H/72);
+                pc.lineTo(W/2-W/18, H/2+H/18);
+                pc.rect(W/2, H/2, 1, 1);
                 pc.stroke();
 
                 // top
@@ -428,6 +459,101 @@
                 pc.arc(W/2, H/6 + r * dpr, r * dpr, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
+
+                // bottom
+                pc.drawImage(image, x - w/6, y + r - h/6, w/3, h/3, W/3, 2*H/3, W/3, H/3);
+                pc.save();
+                pc.beginPath();
+                pc.rect(W/3, 2*H/3, W/3, H/3);
+                pc.closePath();
+                pc.clip();
+                pc.beginPath();
+                pc.arc(W/2, 5*H/6 - r * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.stroke();
+                pc.restore();
+
+                // left
+                pc.drawImage(image, x - r - w/6, y - h/6, w/3, h/3, 0, H/3, W/3, H/3);
+                pc.save();
+                pc.beginPath();
+                pc.rect(0, H/3, W/3, H/3);
+                pc.closePath();
+                pc.clip();
+                pc.beginPath();
+                pc.arc(W/6 + r * dpr, H/2, r * dpr, 0, 2 * Math.PI);
+                pc.stroke();
+                pc.restore();
+
+                // right
+                pc.drawImage(image, x + r - w/6, y - h/6, w/3, h/3, 2*W/3, H/3, W/3, H/3);
+                pc.save();
+                pc.beginPath();
+                pc.rect(2*W/3, H/3, W/3, H/3);
+                pc.closePath();
+                pc.clip();
+                pc.beginPath();
+                pc.arc(5*W/6 - r * dpr, H/2, r * dpr, 0, 2 * Math.PI);
+                pc.stroke();
+                pc.restore();
+
+                // top left
+                pc.drawImage(image, x - r/Math.sqrt(2) - w/6, y - r/Math.sqrt(2) - h/6, w/3, h/3, 0, 0, W/3, H/3);
+                pc.save();
+                pc.beginPath();
+                pc.rect(0, 0, W/3, H/3);
+                pc.closePath();
+                pc.clip();
+                pc.beginPath();
+                pc.arc(W/6 + r/Math.sqrt(2) * dpr, H/6 + r/Math.sqrt(2) * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.stroke();
+                pc.restore();
+
+                // top right
+                pc.drawImage(image, x + r/Math.sqrt(2) - w/6, y - r/Math.sqrt(2) - h/6, w/3, h/3, 2*W/3, 0, W/3, H/3);
+                pc.save();
+                pc.beginPath();
+                pc.rect(2*W/3, 0, W/3, H/3);
+                pc.closePath();
+                pc.clip();
+                pc.beginPath();
+                pc.arc(5*W/6 - r/Math.sqrt(2) * dpr, H/6 + r/Math.sqrt(2) * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.stroke();
+                pc.restore();
+
+                // bottom left
+                pc.drawImage(image, x - r/Math.sqrt(2) - w/6, y + r/Math.sqrt(2) - h/6, w/3, h/3, 0, 2*H/3, W/3, H/3);
+                pc.save();
+                pc.beginPath();
+                pc.rect(0, 2*H/3, W/3, H/3);
+                pc.closePath();
+                pc.clip();
+                pc.beginPath();
+                pc.arc(W/6 + r/Math.sqrt(2) * dpr, 5*H/6 - r/Math.sqrt(2) * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.stroke();
+                pc.restore();
+
+                // bottom right
+                pc.drawImage(image, x + r/Math.sqrt(2) - w/6, y + r/Math.sqrt(2) - h/6, w/3, h/3, 2*W/3, 2*H/3, W/3, H/3);
+                pc.save();
+                pc.beginPath();
+                pc.rect(2*W/3, 2*H/3, W/3, H/3);
+                pc.closePath();
+                pc.clip();
+                pc.beginPath();
+                pc.arc(5*W/6 - r/Math.sqrt(2) * dpr, 5*H/6 - r/Math.sqrt(2) * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.stroke();
+                pc.restore();
+
+                // TODO more
+                // TODO drop image here ...or use example
+                // TODO then, implement:
+                // * keeping around of old circles in an organized manner, and visually distinct from current cirle (fill? gray?)
+                // * adjustments of circles via keyboard and acceptance
+                // * the actual cropping and downloading of images upon acceptance
+                // * maybe a list in the sidebar, with a re-download possibility
+                // * stroke colors from css variables, or js variables
+                // * code cleanup
+                // * stauts message: optionally, persist until cleared?
             }
 
             pc.beginPath();
