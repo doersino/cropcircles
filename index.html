@@ -174,14 +174,13 @@
         /* CROPPING VIEW */
         main {
             width: calc(100vw - var(--sidebar-width));
-            min-width: calc(100vw - var(--sidebar-width));
-            min-height: 100vh;
+            height: 100vh;
             background: repeating-linear-gradient(
                 -42deg,
                 #080808,
                 #080808 13px,
                 #181818 13px,
-                #181818 20px);
+                #181818 20px); /* TODO revisit, or move to variables */
         }
         .dropper {
             padding: 1px; /* fix for margin weirdness */
@@ -206,6 +205,8 @@
         }
         #work {
             display: block;
+            width: 100%;
+            height: 100%;
         }
 
         /* GITHUB CORNER */
@@ -305,7 +306,7 @@
     <script src="https://code.jquery.com/jquery-latest.js" crossorigin="anonymous"></script>
     <script>
 
-        $('#work').hide();
+        //$('#work').hide();
 
         $('.dropper')
             .on('dragover', (e) => {
@@ -323,7 +324,7 @@
                             .load(() => {
                                 // hide the original image and text in drag area
                                 $(".dropper").hide();
-                                $('#work').show();
+                                //$('#work').show();
                                 // display the canvas
                                 // TODO display status
                                 // draw canvas
@@ -360,7 +361,8 @@
                 w: w,
                 h: h,
                 W: W,
-                H: H
+                H: H,
+                dpr: dpr
             }
         }
 
@@ -372,18 +374,21 @@
         let w = pcanv.w;
         let h = pcanv.h;
 
+        let dpr = pcanv.dpr;
+
+
         let work = document.getElementById("work");
+        let wcanv = initCanvas(work);
         let mc = work.getContext("2d");
+        let scale = 1;
         // TODO do the init after the the image has been dropped?
 
         function drawDroppedImage() {
             var image = document.getElementById("dropped-image");
-            work.width = image.width;
-            work.height = image.height;
-            $("main").width(image.width + $("aside").outerWidth());
-            $("main").height(image.height);
-            // TODO also update w, h etc.?
-            mc.drawImage(image, 0, 0, image.width, image.height);
+            var scaleX = work.width / image.width;
+            var scaleY = work.height / image.height;
+            scale = Math.min(scaleX, scaleY);
+            mc.drawImage(image, 0, 0, image.width, image.height, 0, 0, scale * image.width, scale * image.height);
             // TODO get the aspect ratio right
         }
 
@@ -420,7 +425,7 @@
                 pc.closePath();
                 pc.clip();
                 pc.beginPath();
-                pc.arc(W/2, H/6 + r, r, 0, 2 * Math.PI);
+                pc.arc(W/2, H/6 + r * dpr, r * dpr, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
             }
@@ -445,7 +450,7 @@
         var started = false;
         var canvas = $("#work")[0];
         var context = canvas.getContext("2d");
-        var position = $("#work").offset();
+        var position = null;  // not valid yet
         var image;
         var startX = 0;
         var startY = 0;
@@ -457,6 +462,7 @@
 
         $("#work")
             .mousedown((event) => {
+                position = $("#work").offset();
                 startX = event.pageX - position.left;
                 startY = event.pageY - position.top;
                 started = true;
@@ -474,24 +480,22 @@
                     var dx = Math.abs(x - startX);
                     r = Math.sqrt(dx ** 2 + dy ** 2);
 
-                    context.arc(startX, startY, r, 0, 2 * Math.PI);
-                    context.moveTo(startX-r/10, startY-r/10);
-                    context.lineTo(startX+r/10, startY+r/10);
-                    context.moveTo(startX-r/10, startY+r/10);
-                    context.lineTo(startX+r/10, startY-r/10);
-                    context.moveTo(startX, startY);
-                    context.lineTo(x, y);  // TODO terminate at circle boundary
+                    context.arc(startX * dpr, startY * dpr, r * 2, 0, 2 * Math.PI);
+                    context.moveTo(startX * dpr, startY * dpr);
+                    context.lineTo(x * dpr, y * dpr);
+                    context.lineWidth = 2;
+                    context.strokeStyle = "#fff";
                     context.stroke();
 
                     // TODO store definition of cirle: xstart, ystart, r
-                    updatePrec(startX, startY, r);
+                    updatePrec(startX * dpr / scale, startY * dpr / scale, r * dpr / scale);
 
                 }
             })
             .mouseup((event) => {
                 if (started) {
                     started = false;
-                    circs.push({x: startX, y: startX, r: r});
+                    circs.push({x: startX * dpr / scale, y: startX * dpr / scale, r: r * dpr / scale});
                 }
             });
 
