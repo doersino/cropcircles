@@ -20,6 +20,8 @@
 
             --precision-helper-background-color: #000;
 
+            --main-background-color: #131313;
+
             --text-color: #eee;
             --link-color: #bbb;
             --hover-color: #999;
@@ -87,7 +89,7 @@
             padding: 0 0.2rem;
             border-radius: 0.2rem
         }
-        button, label, input[type="text"] {
+        button, label, input[type="text"], select {
             font: inherit;
             color: inherit;
             background-color: var(--input-background-color);
@@ -100,7 +102,7 @@
             text-transform: uppercase;
             border-radius: 0.2rem
         }
-        button:hover, label:hover, input[type="text"]:hover {
+        button:hover, label:hover, input[type="text"]:hover, label:hover select {
             background-color: var(--input-hover-background-color);
             border-color: var(--input-hover-border-color);
         }
@@ -108,6 +110,10 @@
             float: right;
             height: 0;
             margin-top: -0.3em;
+        }
+        select {
+            margin-top: 0.3em;
+            text-transform: none;
         }
         input[type="range"] {
             width: 100%;
@@ -175,12 +181,7 @@
         main {
             width: calc(100vw - var(--sidebar-width));
             height: 100vh;
-            background: repeating-linear-gradient(
-                -42deg,
-                #080808,
-                #080808 13px,
-                #181818 13px,
-                #181818 20px); /* TODO revisit, or move to variables */
+            background-color: var(--main-background-color);
         }
         .dropper {
             padding: 1px; /* fix for margin weirdness */
@@ -273,9 +274,20 @@
         <label><input type="checkbox" class="show-old-selections-checkbox" data-default="yes" onclick="toggleShowOldSelections(this);" checked> show old selections</label>
         <span>Show previously selected circles to help you keep track of what you've already done.</span>
 
+        <label>
+            image background<br>
+            <select class="zoom-level-slider" oninput="adjustZoomLevel(this.value)">
+                <option value="transparent">Transparent</option>
+                <option value="black">White</option>
+                <option value="white">Black</option>
+                <option value="keep-image-background">Keep Image Background</option>
+            </select>
+        </label>
         <span>TODO dropdown for background color: transparent, black, white, image content</span>
 
         <span>TODO zoom slider for precision helper: from 0.5x to 2x? would need to adjust cropped section of image, also radius accordingly</span>
+
+        <span>TODO checkbox: include surroundings. implies image background "keep", includes 1/2 the radius around the selection</span>
 
         <!--<button onclick="copySource(this);">copy source<b></b></button>
         <span>The copied source will be surrounded with asterisks, ready for pasting into a Markdeep document.</span>
@@ -649,9 +661,11 @@
             .mouseup((event) => {
                 if (started) {
                     started = false;
-                    // TODO only do this once accepted
-                    cropAndDownload(startX * dpr / scale, startY * dpr / scale, r * dpr / scale);
-                    circs.push({x: startX * dpr / scale, y: startX * dpr / scale, r: r * dpr / scale});
+                    if (x != startX && y != startY) {
+                        // TODO only do this once accepted
+                        cropAndDownload(startX * dpr / scale, startY * dpr / scale, r * dpr / scale);
+                        circs.push({x: startX * dpr / scale, y: startX * dpr / scale, r: r * dpr / scale});
+                    }
                 }
             });
 
@@ -674,17 +688,26 @@
             ctx.drawImage(image, x - r, y - r, width, height, 0, 0, width, height);
             ctx.restore();
 
-            var dummyLink = document.createElement("a");
+            elem.toBlob(blob => {
+                let url = URL.createObjectURL(blob)
+
+                var dummyLink = document.createElement("a");
+                dummyLink.setAttribute("href", url);
+                dummyLink.setAttribute("download", "cropcircles-x" + x + "y" + y + "r" + r + ".png");
+                dummyLink.style.display = "none";
+                document.body.appendChild(dummyLink);
+                dummyLink.click();
+                document.body.removeChild(dummyLink);
+
+                URL.revokeObjectURL(url);
+            }, "image/png");
+            /*var dummyLink = document.createElement("a");
             dummyLink.setAttribute("href", elem.toDataURL("image/png")); // .replace("image/png", "image/octet-stream")
             dummyLink.setAttribute("download", "cropcircles-x" + x + "y" + y + "r" + r + ".png");
             dummyLink.style.display = "none";
             document.body.appendChild(dummyLink);
-
             dummyLink.click();
-
-            document.body.removeChild(dummyLink);
-
-            // lel this actually worked the first time!
+            document.body.removeChild(dummyLink);*/
         }
 
 
