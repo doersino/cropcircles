@@ -455,7 +455,7 @@
         function updatePrec(x, y, r) {
             pc.clearRect(0, 0, W, H);
 
-            pc.lineWidth = 1;
+            pc.lineWidth = 1 * dpr;
             pc.strokeStyle = "#fff";
 
             if (x) {
@@ -575,8 +575,8 @@
                 // * move stuff to render function based on image (maybe drawn below canvas), old circles, current in-progress circle
                 // * keeping around of old circles in an organized manner, and visually distinct from current cirle (fill? gray?)
                 // * adjustments of circles via keyboard and acceptance
-                // * the actual cropping and downloading of images upon acceptance
-                // * maybe a list in the sidebar, with a re-download possibility
+                // * then, perform the actual cropping and downloading
+                // * maybe a list in the sidebar, with a re-download possibility?
                 // * stroke colors from css variables, or js variables
                 // * code cleanup
                 // * think of additional, more useful settings
@@ -592,7 +592,7 @@
             pc.lineTo(W, H/3);
             pc.moveTo(0, 2*H/3);
             pc.lineTo(W, 2*H/3);
-            pc.lineWidth = 2;
+            pc.lineWidth = 2 * dpr;
             pc.strokeStyle = "#555";
             pc.stroke();
         }
@@ -633,10 +633,10 @@
                     r = Math.sqrt(dx ** 2 + dy ** 2);
 
                     wc.setLineDash([6*dpr, 4*dpr]);
-                    wc.arc(startX * dpr, startY * dpr, r * 2, 0, 2 * Math.PI);
+                    wc.arc(startX * dpr, startY * dpr, r * dpr, 0, 2 * Math.PI);
                     wc.moveTo(startX * dpr, startY * dpr);
                     wc.lineTo(x * dpr, y * dpr);
-                    wc.lineWidth = 2;
+                    wc.lineWidth = 1 * dpr;
                     wc.strokeStyle = "#fff";
                     wc.stroke();
                     wc.setLineDash([]);
