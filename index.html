@@ -186,6 +186,8 @@
             padding: 1px; /* fix for margin weirdness */
             background-color: var(--dropper-background-color);
             height: 100%;
+            width: calc(100vw - var(--sidebar-width));
+            position: absolute;
         }
         .dropper-text {
             border: 0.35rem dashed var(--dropper-color);
@@ -206,13 +208,18 @@
             margin-top: 1em;
             cursor: pointer;
         }
-        #dropped-image {
+        #dropped-image, #cropped-image {
             display: none;
         }
+        #base-image {
+            position: absolute;
+        }
         #work {
+            position: absolute;
             display: block;
-            width: 100%;
-            height: 100%;
+            height: 100vh;
+            width: calc(100vw - var(--sidebar-width));
+            cursor: crosshair;
         }
 
         /* GITHUB CORNER */
@@ -249,17 +256,26 @@
 </head>
 <body>
     <aside class="sidebar">
+        <a href="https://github.com/doersino/cropcircles" class="github-corner" aria-label="View source on GitHub">
+            <svg viewBox="0 0 250 250" aria-hidden="true">
+                <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+                <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+                <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
+            </svg>
+        </a>
         <h1><em>Crop</em> Circles</h1>
         <p>A tool for cropping <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery. <a href="https://github.com/doersino/cropcircles#readme">Learn more…</a></p>
 
-        <span><strong>Usage:</strong> Drop an image into the main area. Click and drag from a center point to make a circular selection. Keeping an eye on the precision helper in the bottom right, adjust the selection via the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd>; you can zoom in or out via <kbd>+</kbd> and <kbd>-</kbd>. You can press <kbd>shift</kbd> to adjust in 10× larger increments. When satisfied, press <kbd>enter</kbd> to accept the selected circle – it will then download as a PNG image with a transparent background.</span>
+        <span><strong>Usage:</strong> Drop an image into the main area. Click and drag from a center point to make a circular selection. Keeping an eye on the precision helper in the bottom right, adjust the selection via the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd>; you can zoom in or out via <kbd>+</kbd> and <kbd>-</kbd>. Press <kbd>shift</kbd> to adjust in 10× larger increments. When satisfied, press <kbd>enter</kbd> to accept the selected circle – it will then download as a PNG image. If you wish to cancel the current selection, press <kbd>esc</kbd>.</span>
 
         <hr>
 
         <label><input type="checkbox" class="show-old-selections-checkbox" data-default="yes" onclick="toggleShowOldSelections(this);" checked> show old selections</label>
         <span>Show previously selected circles to help you keep track of what you've already done.</span>
 
-        TODO dropdown for background color: transparent, black, white, image content
+        <span>TODO dropdown for background color: transparent, black, white, image content</span>
+
+        <span>TODO zoom slider for precision helper: from 0.5x to 2x? would need to adjust cropped section of image, also radius accordingly</span>
 
         <!--<button onclick="copySource(this);">copy source<b></b></button>
         <span>The copied source will be surrounded with asterisks, ready for pasting into a Markdeep document.</span>
@@ -300,20 +316,22 @@
     </aside>
     <footer class="hidden"></footer>
     <main>
+        <img id="base-image">
+        <canvas id="work"></canvas>
         <div class="dropper">
             <div class="dropper-text">
                 Drop image here
                 <em class="load-sample">…or <a>load sample</a>.</em>
             </div>
         </div>
-        <img id="dropped-image">
-        <canvas id="work"></canvas>
     </main>
-
-    <img style="display: none;" id="dropped-image">
+    <img id="dropped-image">
+    <canvas id="cropped-image">
 
     <script src="https://code.jquery.com/jquery-latest.js" crossorigin="anonymous"></script>
     <script>
+
+        // TODO show warning on resize event
 
         //$('#work').hide();
 
@@ -418,16 +436,20 @@
             var scaleX = work.width / image.width;
             var scaleY = work.height / image.height;
             scale = Math.min(scaleX, scaleY);
-            wc.drawImage(image, 0, 0, image.width, image.height, 0, 0, scale * image.width, scale * image.height);
-            // TODO get the aspect ratio right
+            $("#base-image")
+                .attr("src", image.src)
+                .attr("width", scale * image.width / dpr)
+                .attr("height", scale * image.height / dpr);
+            //wc.drawImage(image, 0, 0, image.width, image.height, 0, 0, scale * image.width, scale * image.height);
         }
 
         function redrawCurrentImage(image) {
+            // TODO why tf are these two lines necessary? implementing a render function will probably fix this
             work.width = image.width;
             work.height = image.height;
-            // TODO also update w, h etc.?
+
+            wc.clearRect(0, 0, work.width, work.height);
             wc.drawImage(image, 0, 0, image.width, image.height);
-            // TODO get the aspect ratio right
         }
 
         function updatePrec(x, y, r) {
@@ -550,7 +572,7 @@
                 pc.restore();
 
                 // TODO now, implement:
-                // * move stuff to render function based on image, old circles, current circle
+                // * move stuff to render function based on image (maybe drawn below canvas), old circles, current in-progress circle
                 // * keeping around of old circles in an organized manner, and visually distinct from current cirle (fill? gray?)
                 // * adjustments of circles via keyboard and acceptance
                 // * the actual cropping and downloading of images upon acceptance
@@ -627,9 +649,43 @@
             .mouseup((event) => {
                 if (started) {
                     started = false;
+                    // TODO only do this once accepted
+                    cropAndDownload(startX * dpr / scale, startY * dpr / scale, r * dpr / scale);
                     circs.push({x: startX * dpr / scale, y: startX * dpr / scale, r: r * dpr / scale});
                 }
             });
+
+        function cropAndDownload(x, y, r) {
+            // TODO separate, hidden canvas for cropping. init it with correct size, then set cropping mask depending on option, then write image section to it, then download (with sensible filename)
+            width = r * 2;
+            height = r * 2;
+
+            var elem = document.getElementById("cropped-image");
+            var image = document.getElementById("dropped-image");
+            elem.setAttribute("width", width);
+            elem.setAttribute("height", height);
+            var ctx = elem.getContext("2d");
+            ctx.clearRect(0, 0, width, height);
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(r, r, r, 0, 2 * Math.PI);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(image, x - r, y - r, width, height, 0, 0, width, height);
+            ctx.restore();
+
+            var dummyLink = document.createElement("a");
+            dummyLink.setAttribute("href", elem.toDataURL("image/png")); // .replace("image/png", "image/octet-stream")
+            dummyLink.setAttribute("download", "cropcircles-x" + x + "y" + y + "r" + r + ".png");
+            dummyLink.style.display = "none";
+            document.body.appendChild(dummyLink);
+
+            dummyLink.click();
+
+            document.body.removeChild(dummyLink);
+
+            // lel this actually worked the first time!
+        }
 
 
         // helper function for displaying status messages
@@ -677,13 +733,5 @@
             localStorage.removeItem("show-old-selections");
         }
     </script>
-
-    <a href="https://github.com/doersino/cropcircles" class="github-corner" aria-label="View source on GitHub">
-        <svg viewBox="0 0 250 250" aria-hidden="true">
-            <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
-            <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
-            <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
-        </svg>
-    </a>
 </body>
 </html>
