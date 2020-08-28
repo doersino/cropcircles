@@ -1,4 +1,5 @@
-<html class="light">
+<!DOCTYPE html>
+<html>
 <head>
     <meta charset="utf-8" lang="en">
     <title>Crop Circles</title>
@@ -267,7 +268,7 @@
         <h1><em>Crop</em> Circles</h1>
         <p>A tool for cropping <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery. <a href="https://github.com/doersino/cropcircles#readme">Learn more…</a></p>
 
-        <span><strong>Usage:</strong> Drop an image into the main area. Click and drag from a center point to make a circular selection. Keeping an eye on the precision helper in the bottom right, adjust the selection via the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd>; you can zoom in or out via <kbd>+</kbd> and <kbd>-</kbd>. Press <kbd>shift</kbd> to adjust in 10× larger increments. When satisfied, press <kbd>enter</kbd> to accept the selected circle – it will then download as a PNG image. If you wish to cancel the current selection, press <kbd>esc</kbd>.</span>
+        <span><strong>Usage:</strong> Drop an image into the main area. Click and drag from a center point to make a circular selection. Keeping an eye on the precision helper in the bottom right, adjust the selection like a gamer via <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>; you can zoom in with <kbd>O</kbd> and out via <kbd>P</kbd>. Press <kbd>shift</kbd> to adjust in 10× larger increments. When satisfied, press <kbd>enter</kbd> to accept the selected circle – it will then download as a PNG image. If you wish to cancel the current selection, press <kbd>esc</kbd>.</span>
 
         <hr>
 
@@ -287,7 +288,7 @@
 
         <span>TODO zoom slider for precision helper: from 0.5x to 2x? would need to adjust cropped section of image, also radius accordingly</span>
 
-        <span>TODO checkbox: include surroundings. implies image background "keep", includes 1/2 the radius around the selection</span>
+        <span>TODO checkbox: include surroundings. implies image background "keep", includes 1/2 the radius around the selection. during circle drawing, show dotted preview of rect.</span>
 
         <!--<button onclick="copySource(this);">copy source<b></b></button>
         <span>The copied source will be surrounded with asterisks, ready for pasting into a Markdeep document.</span>
@@ -338,42 +339,64 @@
         </div>
     </main>
     <img id="dropped-image">
-    <canvas id="cropped-image">
+    <canvas id="cropped-image"></canvas>
 
     <script src="https://code.jquery.com/jquery-latest.js" crossorigin="anonymous"></script>
     <script>
         // TODO now, implement:
-        // * move stuff to render function based on image (maybe drawn below canvas), old circles, current in-progress circle
-        // * keeping around of old circles in an organized manner, and visually distinct from current cirle (fill? gray?)
-        // * adjustments of circles via keyboard and acceptance
-        // * then, perform the actual cropping and downloading
         // * maybe a list in the sidebar, with a re-download possibility?
-        // * stroke colors from css variables, or js variables
-        // * code cleanup
         // * think of additional, more useful settings
-        // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice
+        // * stroke colors from css variables, or js variables
+        // * maybe get latlon from filename somehow? would need nw and se in there. then also have (linearly interpolated, no need to be fancy at these scales) latlon in output filename.
+        // * on click, insert a circle the size of the previous circle? that could get around mi/km selection necessity
+        // * similarly, on move or resize immediately after accepting a circle (i.e. before starting to draw a new one), make a copy of the just-accepted one and proceed with that
+        // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice. otherwise, show a warning on resize?
 
-        // TODO show warning on resize event
+        /////////////
+        // GLOBALS //
+        /////////////
+
+        let dpr = 1;
+        let scale = null;
+
+        let precisionHelper = null;
+        let work = null;
+
+        let currentlySelectingCircle = false;
+        let currentCircle = null;
+
+        let circles = [];
 
 
+        /////////////
+        // HELPERS //
+        /////////////
 
+        function logicalCanvasToImage(n) {  // for mouse tracking
+            return n * dpr / scale;
+        }
+        function imageToLogicalCanvas(n) {  // for image sizing
+            return scale * n / dpr;
+        }
+        function imageToPhysicalCanvas(n) {  // for selection drawing
+            return n * scale;
+        }
+        function logicalCanvastoPhysicalCanvas(n) {  // primarily for line strength scaling
+            return n * dpr;
+        }
 
         function setupCanvas(elem) {
 
             // set height and width correctly on retina devices
             // w, h: logical pixels
             // W, H: physical pixels (larger on retina devices)
-            var w = elem.offsetWidth;
-            var h = elem.offsetHeight;
-            var dpr = 1;
-            var W, H;
-            if (window.devicePixelRatio) {
-                dpr = window.devicePixelRatio;
-                elem.style.width = w + "px";
-                elem.style.height = h + "px";
-                W = w * dpr;
-                H = h * dpr;
-            }
+            let w = elem.offsetWidth;
+            let h = elem.offsetHeight;
+            elem.style.width = w + "px";
+            elem.style.height = h + "px";
+
+            let W = w * dpr;
+            let H = h * dpr;
             elem.setAttribute("width", W);
             elem.setAttribute("height", H);
 
@@ -383,19 +406,88 @@
                 w: w,
                 h: h,
                 W: W,
-                H: H,
-                dpr: dpr
+                H: H
             }
         }
 
+        //////////////////
+        // CANVAS SETUP //
+        //////////////////
+
         function setupPrecisionHelper() {
             let prec = document.getElementById("prec");
-            let precisionHelper = setupCanvas(prec);
-            renderPrecisionHelper(precisionHelper);
-            return precisionHelper;
+            precisionHelper = setupCanvas(prec);
+            renderPrecisionHelper();
         }
 
-        function renderPrecisionHelper(precisionHelper) {
+        function setupWork() {
+            work = document.getElementById("work");
+            setupCanvas(work);
+        }
+
+
+        ////////////////////
+        // IMAGE DROPPING //
+        ////////////////////
+
+        $('.dropper')
+            .on('dragover', (e) => {
+                e.preventDefault();
+            })
+            .on('drop', (e) => {
+                e.preventDefault();
+                setStatus("Setting up image...", true);
+
+                let files = e.originalEvent.dataTransfer.files;
+                if (files.length > 0) {
+
+                    // TODO error if more than 1 file?
+                    let reader = new FileReader();
+                    reader.onload = e => {
+                        setImage(e.target.result);
+                        clearStatus();
+                    };
+                    reader.readAsDataURL(files[0]);
+                }
+            });
+
+        $('.load-sample')
+            .on('click', (e) => {
+                e.preventDefault();
+                setStatus("Setting up sample image...", true);
+                setImage("sample.jpg");
+                clearStatus();
+            });
+
+        function setImage(src) {
+
+            // store the image in a hidden img tag
+            $("#dropped-image")
+                .load(() => {
+                    $(".dropper").hide();
+                    drawDroppedImage();
+                })
+                .attr("src", src);
+        }
+
+        function drawDroppedImage() {
+            let image = document.getElementById("dropped-image");
+
+            let scaleX = work.width / image.width;
+            let scaleY = work.height / image.height;
+            scale = Math.min(scaleX, scaleY);
+
+            $("#base-image")
+                .attr("src", image.src)
+                .attr("width", imageToLogicalCanvas(image.width))
+                .attr("height", imageToLogicalCanvas(image.height));
+        }
+
+        ////////////////////
+        // CANVAS DRAWING //
+        ////////////////////
+
+        function renderPrecisionHelper() {
             let pc = precisionHelper.ctx;
             let W = precisionHelper.W;
             let H = precisionHelper.H;
@@ -404,14 +496,14 @@
 
             pc.clearRect(0, 0, W, H);
 
-            pc.lineWidth = 1 * dpr;
+            pc.lineWidth = logicalCanvastoPhysicalCanvas(1);
             pc.strokeStyle = "#fff";
 
             if (currentCircle) {
-                var image = document.getElementById("dropped-image");
-                let x = currentCircle.startX * dpr / scale;
-                let y = currentCircle.startY * dpr / scale;
-                let r = currentCircle.r * dpr / scale;
+                let image = document.getElementById("dropped-image");
+                let x = currentCircle.startX;
+                let y = currentCircle.startY;
+                let r = currentCircle.r;
 
                 // center
                 pc.drawImage(image, x - w/6, y - h/6, w/3, h/3, W/3, H/3, W/3, H/3);
@@ -533,102 +625,25 @@
             pc.lineTo(W, H/3);
             pc.moveTo(0, 2*H/3);
             pc.lineTo(W, 2*H/3);
-            pc.lineWidth = 2 * dpr;
+            pc.lineWidth = logicalCanvastoPhysicalCanvas(2);
             pc.strokeStyle = "#555";
             pc.stroke();
         }
 
-        function setupWork() {
-
-        }
-
-        let dpr = 1;
-        if (window.devicePixelRatio) {
-            dpr = window.devicePixelRatio;
-        }
-
-        let precisionHelper = setupPrecisionHelper();
-
-        let work = document.getElementById("work");
-        let wcanv = setupCanvas(work);
-        let wc = work.getContext("2d");
-        let scale = 1;
-
-        var currentlySelectingCircle = false;
-        var currentCircle = null;
-
-        var circles = [];
-
-
-
-        $('.dropper')
-            .on('dragover', (e) => {
-                e.preventDefault();
-            })
-            .on('drop', (e) => {
-                e.preventDefault();
-                setStatus("Setting up image...", true);
-
-                let files = e.originalEvent.dataTransfer.files;
-                if (files.length > 0) {
-
-                    // TODO error if more than 1 file?
-                    let reader = new FileReader();
-                    reader.onload = (e) => {
-
-                        // store the image in a hidden img tag
-                        $("#dropped-image")
-                            .load(() => {
-                                $(".dropper").hide();
-                                drawDroppedImage();
-                                clearStatus();
-
-                            })
-                            .attr("src", e.target.result);
-                    };
-                    reader.readAsDataURL(files[0]);
-                }
-            });
-
-        $('.load-sample')
-            .on('click', (e) => {
-                e.preventDefault();
-                setStatus("Setting up image...", true)
-
-                $("#dropped-image")
-                    .load(() => {
-                        $(".dropper").hide();
-                        drawDroppedImage();
-                        clearStatus();
-                    })
-                    .attr("src", "sample.jpg");
-            });
-
-        function drawDroppedImage() {
-            var image = document.getElementById("dropped-image");
-
-            var scaleX = work.width / image.width;
-            var scaleY = work.height / image.height;
-            scale = Math.min(scaleX, scaleY);
-
-            $("#base-image")
-                .attr("src", image.src)
-                .attr("width", scale * image.width / dpr)  // TODO work.width / dpr?
-                .attr("height", scale * image.height / dpr);  // TODO work.height / dpr?
-        }
-
         function renderWork() {
+            let wc = work.getContext("2d");
+
             wc.clearRect(0, 0, work.width, work.height);  // TODO do this more neatly or is it neat enough?
 
             if (currentCircle) {
                 // TODO does it make more sense to store these values globally, for adjustment via keyboard shortcuts? probably!
 
                 wc.beginPath();
-                wc.setLineDash([6*dpr, 4*dpr]);
-                wc.arc(currentCircle.startX * dpr, currentCircle.startY * dpr, currentCircle.r * dpr, 0, 2 * Math.PI);
-                wc.moveTo(currentCircle.startX * dpr, currentCircle.startY * dpr);
-                wc.lineTo(currentCircle.x * dpr, currentCircle.y * dpr);
-                wc.lineWidth = 1 * dpr;
+                wc.setLineDash([logicalCanvastoPhysicalCanvas(6), logicalCanvastoPhysicalCanvas(4)]);
+                wc.arc(imageToPhysicalCanvas(currentCircle.startX), imageToPhysicalCanvas(currentCircle.startY), imageToPhysicalCanvas(currentCircle.r), 0, 2 * Math.PI);
+                wc.moveTo(imageToPhysicalCanvas(currentCircle.startX), imageToPhysicalCanvas(currentCircle.startY));
+                wc.lineTo(imageToPhysicalCanvas(currentCircle.x), imageToPhysicalCanvas(currentCircle.y));
+                wc.lineWidth = logicalCanvastoPhysicalCanvas(1);
                 wc.strokeStyle = "#fff";
                 wc.stroke();
                 wc.setLineDash([]);
@@ -650,80 +665,115 @@
             .mousedown((event) => {
                 currentlySelectingCircle = true;
                 currentCircle = {
-                    startX: event.pageX,  // - $("#work").offset().left if top left corner of canvas is not at (0,0)
-                    startY: event.pageY,  // analogous
-                    x: event.pageX,
-                    y: event.pageY,
+                    startX: logicalCanvasToImage(event.pageX),  // - $("#work").offset().left if top left corner of canvas is not at (0,0)
+                    startY: logicalCanvasToImage(event.pageY),  // analogous
+                    x: logicalCanvasToImage(event.pageX),
+                    y: logicalCanvasToImage(event.pageY),
                     r: 0
                 };
             })
             .mousemove((event) => {
                 if (currentlySelectingCircle) {
-                    x = event.pageX;
-                    y = event.pageY;
+                    x = logicalCanvasToImage(event.pageX);
+                    y = logicalCanvasToImage(event.pageY);
 
-                    var dy = Math.abs(y - currentCircle.startY);
-                    var dx = Math.abs(x - currentCircle.startX);
+                    let dy = Math.abs(y - currentCircle.startY);
+                    let dx = Math.abs(x - currentCircle.startX);
                     r = Math.sqrt(dx ** 2 + dy ** 2);
 
                     currentCircle.x = x;
                     currentCircle.y = y;
                     currentCircle.r = r;
                     renderWork();
-                    renderPrecisionHelper(precisionHelper);  // TODO get rid of this argument
+                    renderPrecisionHelper();
                 }
             })
             .mouseup((event) => {
                 currentlySelectingCircle = false;
             });
 
-        function logicalCanvasToPhysicalCanvas(n) {
-            return n * dpr;
+
+        /////////////////////////
+        // CROPPING & DOWNLOAD //
+        /////////////////////////
+
+        function cropAndDownload(circle) {
+            let x = circle.x;
+            let y = circle.y;
+            let r = circle.r;
+
+            width = Math.ceil(r * 2);
+            height = Math.ceil(r * 2);
+
+            let image = document.getElementById("dropped-image");
+            let croppedImage = document.getElementById("cropped-image");
+            croppedImage.setAttribute("width", width);
+            croppedImage.setAttribute("height", height);
+            let cic = croppedImage.getContext("2d");
+            cic.clearRect(0, 0, width, height);
+            cic.save();
+            cic.beginPath();
+            cic.arc(r, r, r, 0, 2 * Math.PI);
+            cic.closePath();
+            cic.clip();
+            cic.drawImage(image, x - r, y - r, width, height, 0, 0, width, height);
+            cic.restore();
+
+            croppedImage.toBlob(blob => {
+                let url = URL.createObjectURL(blob)
+
+                let dummyLink = document.createElement("a");
+                dummyLink.setAttribute("href", url);
+                dummyLink.setAttribute("download", "cropcircles-x" + parseInt(x) + "y" + parseInt(y) + "r" + parseInt(r) + ".png");
+                dummyLink.style.display = "none";
+                document.body.appendChild(dummyLink);
+                dummyLink.click();
+                document.body.removeChild(dummyLink);
+
+                URL.revokeObjectURL(url);
+            }, "image/png");
         }
-        function physicalCanvasToImage(n) {
-            return n / scale;
-        }
-        function imageToPhysicalCanvas(n) {
-            return n * scale;
-        }
-        function physicalCanvasToLogicalCanvas(n) {
-            return n / dpr;
-        }
-        // TODO composition, or jsut define the ones i actually need
-        // TODO note that keeping all points etc. in image space will allow easy resizing of canvas if needed
-        // TODO need: logical to image (mouse tracking), image to physical (circle drawing), logical to physical (drawing of lines in precision helper), ...?
+
+
+        //////////////////////////
+        // KEYBOARD INTERACTION //
+        //////////////////////////
 
         function acceptCurrentCircle() {
             setStatus("Cropping image...", true);
-            if (currentCircle.x != currentCircle.startX && currentCircle.y != currentCircle.startY) {
-                cropAndDownload(currentCircle.startX * dpr / scale, currentCircle.startY * dpr / scale, currentCircle.r * dpr / scale);
 
-                circles.push({
-                    x: currentCircle.startX * dpr / scale,
-                    y: currentCircle.startY * dpr / scale,
-                    r: currentCircle.r * dpr / scale
-                });
-                currentCircle = null;
+            circles.push({
+                x: currentCircle.startX,
+                y: currentCircle.startY,
+                r: currentCircle.r
+            });
+            currentCircle = null;
+            cropAndDownload(circles[circles.length-1]);
 
-                renderWork();
-                renderPrecisionHelper(precisionHelper);
-            }
+            renderWork();
+            renderPrecisionHelper();
+
             clearStatus();
+        }
+
+        function cancelCurrentCircle() {
+            currentCircle = null;
+            renderWork();
+            renderPrecisionHelper();
         }
 
         function scaleCurrentCircle(s) {
             currentCircle.r += s;
 
-            // TODO what to do with x, y?
-            currentCircle.x += s;
-            currentCircle.y += s;
+            // this took some figuring out!
+            let f = currentCircle.r / (currentCircle.r - s);
+            currentCircle.x = currentCircle.startX + (currentCircle.x - currentCircle.startX) * f;
+            currentCircle.y = currentCircle.startY + (currentCircle.y - currentCircle.startY) * f;
 
             renderWork();
-            renderPrecisionHelper(precisionHelper);
+            renderPrecisionHelper();
         }
 
-        // TODO translation/scaling should happen in image space, not canvas space! would it make sense, then, to store the current circle in image space? perhaps with angle instead of x,y to make scaling easier?
-        // TODO => just implement the projection functions already!
         function moveCurrentCircle(x, y) {
             currentCircle.startX += x;
             currentCircle.startY += y;
@@ -731,15 +781,15 @@
             currentCircle.y += y;
 
             renderWork();
-            renderPrecisionHelper(precisionHelper);
+            renderPrecisionHelper();
         }
 
-        // TODO only enable this once image has been dropped and a selection has been made
+        // TODO only enable this once image has been dropped and a selection has been made?
         $(document)
             .keydown(event => {
                 let factor = 1;
                 if (event.shiftKey) {
-                    factor = 10;
+                    factor = 20;
                 }
 
                 console.log(event.which);
@@ -747,6 +797,9 @@
                 if (event.which == 13) {
                     event.preventDefault();
                     acceptCurrentCircle();
+                } else if (event.which == 27) {
+                    event.preventDefault();
+                    cancelCurrentCircle();
                 } else if (event.which == 87) {  // W
                     event.preventDefault();
                     moveCurrentCircle(0, -factor);
@@ -759,54 +812,23 @@
                 } else if (event.which == 68) {  // D
                     event.preventDefault();
                     moveCurrentCircle(factor, 0);
-                } else if (event.which == 81) {  // Q
+                } else if (event.which == 79) {  // O
                     event.preventDefault();
                     scaleCurrentCircle(-factor);
-                } else if (event.which == 69) {  // E
+                } else if (event.which == 80) {  // P
                     event.preventDefault();
                     scaleCurrentCircle(factor);
                 }
-                // TODO + 107??, - 109??, esc 27
             });
 
-        function cropAndDownload(x, y, r) {
-            // TODO separate, hidden canvas for cropping. init it with correct size, then set cropping mask depending on option, then write image section to it, then download (with sensible filename)
-            width = r * 2;
-            height = r * 2;
 
-            var elem = document.getElementById("cropped-image");
-            var image = document.getElementById("dropped-image");
-            elem.setAttribute("width", width);
-            elem.setAttribute("height", height);
-            var ctx = elem.getContext("2d");
-            ctx.clearRect(0, 0, width, height);
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(r, r, r, 0, 2 * Math.PI);
-            ctx.closePath();
-            ctx.clip();
-            ctx.drawImage(image, x - r, y - r, width, height, 0, 0, width, height);
-            ctx.restore();
-
-            elem.toBlob(blob => {
-                let url = URL.createObjectURL(blob)
-
-                var dummyLink = document.createElement("a");
-                dummyLink.setAttribute("href", url);
-                dummyLink.setAttribute("download", "cropcircles-x" + x + "y" + y + "r" + r + ".png");
-                dummyLink.style.display = "none";
-                document.body.appendChild(dummyLink);
-                dummyLink.click();
-                document.body.removeChild(dummyLink);
-
-                URL.revokeObjectURL(url);
-            }, "image/png");
-        }
-
+        ////////////
+        // STATUS //
+        ////////////
 
         // helper function for displaying status messages
         function setStatus(message, persist) {
-            var status = document.querySelector("footer");
+            let status = document.querySelector("footer");
             status.innerHTML = message;
             status.className = "";
             if (!persist) {
@@ -814,16 +836,22 @@
             }
         }
 
+        // helper function for hiding the current status message
         function clearStatus() {
-            var status = document.querySelector("footer");
+            let status = document.querySelector("footer");
             status.className = "hidden";
         }
 
-        var showOldSelections = true;
-        var showOldSelectionsCheckbox = document.querySelector(".show-old-selections-checkbox");
 
-        // set up canvases and restore settings from local storage
-        function setup() {
+        ////////////
+        // CONFIG //
+        ////////////
+
+        let showOldSelections = true;
+        let showOldSelectionsCheckbox = document.querySelector(".show-old-selections-checkbox");
+
+        // process config, restore settings from local storage if existant
+        function setupConfig() {
 
             // restore settings from local storage
             if (showOldSelections = window.localStorage.getItem("show-old-selections")) {
@@ -835,9 +863,8 @@
                 // but if this line is not run: on first load with no local storage set yet, old circs don't show up until the checkbox is toggled twice
             }
 
-            // TODO more
+            // TODO more settings
         }
-        setup();
 
         function updateShowOldSelections(checkbox) {
             showOldSelections = !!checkbox.checked;
@@ -853,6 +880,22 @@
         function nukeLocalStorage() {
             localStorage.removeItem("show-old-selections");
         }
+
+
+        ////////////////////////////////////
+        // IT'S LIGHTS OUT AND AWAY WE GO //
+        ////////////////////////////////////
+
+        $(document).ready(() => {
+            if (window.devicePixelRatio) {
+                dpr = window.devicePixelRatio;
+            }
+
+            setupPrecisionHelper();
+            setupWork();
+
+            setupConfig();
+        });
     </script>
 </body>
 </html>
