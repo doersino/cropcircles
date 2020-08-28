@@ -342,65 +342,27 @@
 
     <script src="https://code.jquery.com/jquery-latest.js" crossorigin="anonymous"></script>
     <script>
+        // TODO now, implement:
+        // * move stuff to render function based on image (maybe drawn below canvas), old circles, current in-progress circle
+        // * keeping around of old circles in an organized manner, and visually distinct from current cirle (fill? gray?)
+        // * adjustments of circles via keyboard and acceptance
+        // * then, perform the actual cropping and downloading
+        // * maybe a list in the sidebar, with a re-download possibility?
+        // * stroke colors from css variables, or js variables
+        // * code cleanup
+        // * think of additional, more useful settings
+        // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice
 
         // TODO show warning on resize event
 
-        //$('#work').hide();
 
-        $('.dropper')
-            .on('dragover', (e) => {
-                e.preventDefault();
-            })
-            .on('drop', (e) => {
-                e.preventDefault();
-                setStatus("Setting up image...", true)
-                let files = e.originalEvent.dataTransfer.files;
-                if (files.length > 0) {
-                    // TODO error if more than 1 file?
-                    let reader = new FileReader();
-                    reader.onload = (e) => {
-                        // I save the image in an img component in case i want to restore to the initial image (img is hidden)
-                        $("#dropped-image")
-                            .load(() => {
-                                // hide the original image and text in drag area
-                                $(".dropper").hide();
-                                //$('#work').show();
-                                // display the canvas
-                                // TODO display status
-                                // draw canvas
-                                drawDroppedImage();
-                                clearStatus();
 
-                            })
-                            .attr("src", e.target.result);
-                    };
-                    reader.readAsDataURL(files[0]);
-                }
-            });
 
-        $('.load-sample')
-            .on('click', (e) => {
-                e.preventDefault();
-                setStatus("Setting up image...", true)
-                $("#dropped-image")
-                    .load(() => {
-                        // hide the original image and text in drag area
-                        $(".dropper").hide();
-                        //$('#work').show();
-                        // display the canvas
-                        // TODO display status
-                        // draw canvas
-                        drawDroppedImage();
-                        clearStatus();
-                    })
-                    .attr("src", "sample.jpg");
-            });
-
-        function initCanvas(elem) {
+        function setupCanvas(elem) {
 
             // set height and width correctly on retina devices
             // w, h: logical pixels
-            // W, H: physical pixels
+            // W, H: physical pixels (larger on retina devices)
             var w = elem.offsetWidth;
             var h = elem.offsetHeight;
             var dpr = 1;
@@ -426,52 +388,30 @@
             }
         }
 
-        let prec = document.getElementById("prec");
-        let pcanv = initCanvas(prec);
-        let pc = pcanv.ctx;
-        let W = pcanv.W;
-        let H = pcanv.H;
-        let w = pcanv.w;
-        let h = pcanv.h;
-
-        let dpr = pcanv.dpr;
-
-
-        let work = document.getElementById("work");
-        let wcanv = initCanvas(work);
-        let wc = work.getContext("2d");
-        let scale = 1;
-        // TODO do the init after the the image has been dropped?
-
-        function drawDroppedImage() {
-            var image = document.getElementById("dropped-image");
-            var scaleX = work.width / image.width;
-            var scaleY = work.height / image.height;
-            scale = Math.min(scaleX, scaleY);
-            $("#base-image")
-                .attr("src", image.src)
-                .attr("width", scale * image.width / dpr)
-                .attr("height", scale * image.height / dpr);
-            //wc.drawImage(image, 0, 0, image.width, image.height, 0, 0, scale * image.width, scale * image.height);
+        function setupPrecisionHelper() {
+            let prec = document.getElementById("prec");
+            let precisionHelper = setupCanvas(prec);
+            renderPrecisionHelper(precisionHelper);
+            return precisionHelper;
         }
 
-        function redrawCurrentImage(image) {
-            // TODO why tf are these two lines necessary? implementing a render function will probably fix this
-            work.width = image.width;
-            work.height = image.height;
+        function renderPrecisionHelper(precisionHelper) {
+            let pc = precisionHelper.ctx;
+            let W = precisionHelper.W;
+            let H = precisionHelper.H;
+            let w = precisionHelper.w;
+            let h = precisionHelper.h;
 
-            wc.clearRect(0, 0, work.width, work.height);
-            wc.drawImage(image, 0, 0, image.width, image.height);
-        }
-
-        function updatePrec(x, y, r) {
             pc.clearRect(0, 0, W, H);
 
             pc.lineWidth = 1 * dpr;
             pc.strokeStyle = "#fff";
 
-            if (x) {
+            if (currentCircle) {
                 var image = document.getElementById("dropped-image");
+                let x = currentCircle.startX * dpr / scale;
+                let y = currentCircle.startY * dpr / scale;
+                let r = currentCircle.r * dpr / scale;
 
                 // center
                 pc.drawImage(image, x - w/6, y - h/6, w/3, h/3, W/3, H/3, W/3, H/3);
@@ -582,17 +522,6 @@
                 pc.arc(5*W/6 - r/Math.sqrt(2) * dpr, 5*H/6 - r/Math.sqrt(2) * dpr, r * dpr, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
-
-                // TODO now, implement:
-                // * move stuff to render function based on image (maybe drawn below canvas), old circles, current in-progress circle
-                // * keeping around of old circles in an organized manner, and visually distinct from current cirle (fill? gray?)
-                // * adjustments of circles via keyboard and acceptance
-                // * then, perform the actual cropping and downloading
-                // * maybe a list in the sidebar, with a re-download possibility?
-                // * stroke colors from css variables, or js variables
-                // * code cleanup
-                // * think of additional, more useful settings
-                // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice
             }
 
             pc.beginPath();
@@ -608,65 +537,210 @@
             pc.strokeStyle = "#555";
             pc.stroke();
         }
-        updatePrec(null, null, null);
-        // TODO divide into 9 views: center and edges. draw at full res (i.e. draw pixels as 2x2 on @2x)
+
+        function setupWork() {
+
+        }
+
+        let dpr = 1;
+        if (window.devicePixelRatio) {
+            dpr = window.devicePixelRatio;
+        }
+
+        let precisionHelper = setupPrecisionHelper();
+
+        let work = document.getElementById("work");
+        let wcanv = setupCanvas(work);
+        let wc = work.getContext("2d");
+        let scale = 1;
+
+        var currentlySelectingCircle = false;
+        var currentCircle = null;
+
+        var circles = [];
 
 
-        var started = false;
-        var position = null;  // not valid yet
-        var image;
-        var startX = 0;
-        var startY = 0;
-        var x = 0;
-        var y = 0;
-        var r = 0;
 
-        var circs = [];
+        $('.dropper')
+            .on('dragover', (e) => {
+                e.preventDefault();
+            })
+            .on('drop', (e) => {
+                e.preventDefault();
+                setStatus("Setting up image...", true);
+
+                let files = e.originalEvent.dataTransfer.files;
+                if (files.length > 0) {
+
+                    // TODO error if more than 1 file?
+                    let reader = new FileReader();
+                    reader.onload = (e) => {
+
+                        // store the image in a hidden img tag
+                        $("#dropped-image")
+                            .load(() => {
+                                $(".dropper").hide();
+                                drawDroppedImage();
+                                clearStatus();
+
+                            })
+                            .attr("src", e.target.result);
+                    };
+                    reader.readAsDataURL(files[0]);
+                }
+            });
+
+        $('.load-sample')
+            .on('click', (e) => {
+                e.preventDefault();
+                setStatus("Setting up image...", true)
+
+                $("#dropped-image")
+                    .load(() => {
+                        $(".dropper").hide();
+                        drawDroppedImage();
+                        clearStatus();
+                    })
+                    .attr("src", "sample.jpg");
+            });
+
+        function drawDroppedImage() {
+            var image = document.getElementById("dropped-image");
+
+            var scaleX = work.width / image.width;
+            var scaleY = work.height / image.height;
+            scale = Math.min(scaleX, scaleY);
+
+            $("#base-image")
+                .attr("src", image.src)
+                .attr("width", scale * image.width / dpr)  // TODO work.width / dpr?
+                .attr("height", scale * image.height / dpr);  // TODO work.height / dpr?
+        }
+
+        function renderWork() {
+            wc.clearRect(0, 0, work.width, work.height);  // TODO do this more neatly or is it neat enough?
+
+            if (currentCircle) {
+                // TODO does it make more sense to store these values globally, for adjustment via keyboard shortcuts? probably!
+
+                wc.beginPath();
+                wc.setLineDash([6*dpr, 4*dpr]);
+                wc.arc(currentCircle.startX * dpr, currentCircle.startY * dpr, currentCircle.r * dpr, 0, 2 * Math.PI);
+                wc.moveTo(currentCircle.startX * dpr, currentCircle.startY * dpr);
+                wc.lineTo(currentCircle.x * dpr, currentCircle.y * dpr);
+                wc.lineWidth = 1 * dpr;
+                wc.strokeStyle = "#fff";
+                wc.stroke();
+                wc.setLineDash([]);
+            }
+
+            if (showOldSelections) {
+                circles.forEach(circle => {
+                    wc.beginPath();
+                    wc.arc(circle.x * scale, circle.y * scale, circle.r * scale, 0, 2 * Math.PI);
+                    wc.fillStyle = "rgba(255,255,255,0.2)";
+                    wc.fill();
+                    wc.strokeStyle = "rgba(255,255,255,0.5)";
+                    wc.stroke();
+                });
+            }
+        }
 
         $("#work")
             .mousedown((event) => {
-                position = $("#work").offset();
-                startX = event.pageX - position.left;
-                startY = event.pageY - position.top;
-                started = true;
-                image = new Image;
-                image.src = work.toDataURL("image/png");  // TODO this isn't fast – might another format be better?
-                // TODO or, alternatively, draw input image on a separate layer/canvas behind programmatic stuff? since it doesn't ever actually change
+                currentlySelectingCircle = true;
+                currentCircle = {
+                    startX: event.pageX,  // - $("#work").offset().left if top left corner of canvas is not at (0,0)
+                    startY: event.pageY,  // analogous
+                    x: event.pageX,
+                    y: event.pageY,
+                    r: 0
+                };
             })
             .mousemove((event) => {
-                if (started) {
-                    redrawCurrentImage(image);
+                if (currentlySelectingCircle) {
+                    x = event.pageX;
+                    y = event.pageY;
 
-                    x = event.pageX - position.left;
-                    y = event.pageY - position.top;
-
-                    var dy = Math.abs(y - startY);
-                    var dx = Math.abs(x - startX);
+                    var dy = Math.abs(y - currentCircle.startY);
+                    var dx = Math.abs(x - currentCircle.startX);
                     r = Math.sqrt(dx ** 2 + dy ** 2);
 
-                    wc.setLineDash([6*dpr, 4*dpr]);
-                    wc.arc(startX * dpr, startY * dpr, r * dpr, 0, 2 * Math.PI);
-                    wc.moveTo(startX * dpr, startY * dpr);
-                    wc.lineTo(x * dpr, y * dpr);
-                    wc.lineWidth = 1 * dpr;
-                    wc.strokeStyle = "#fff";
-                    wc.stroke();
-                    wc.setLineDash([]);
-
-                    // TODO store definition of cirle: xstart, ystart, r
-                    updatePrec(startX * dpr / scale, startY * dpr / scale, r * dpr / scale);
-
+                    currentCircle.x = x;
+                    currentCircle.y = y;
+                    currentCircle.r = r;
+                    renderWork();
+                    renderPrecisionHelper(precisionHelper);  // TODO get rid of this argument
                 }
             })
             .mouseup((event) => {
-                if (started) {
-                    started = false;
-                    if (x != startX && y != startY) {
-                        // TODO only do this once accepted
-                        cropAndDownload(startX * dpr / scale, startY * dpr / scale, r * dpr / scale);
-                        circs.push({x: startX * dpr / scale, y: startX * dpr / scale, r: r * dpr / scale});
-                    }
+                currentlySelectingCircle = false;
+            });
+
+        function acceptCurrentCircle() {
+            setStatus("Cropping image...", true);
+            if (currentCircle.x != currentCircle.startX && currentCircle.y != currentCircle.startY) {
+                cropAndDownload(currentCircle.startX * dpr / scale, currentCircle.startY * dpr / scale, currentCircle.r * dpr / scale);
+
+                circles.push({
+                    x: currentCircle.startX * dpr / scale,
+                    y: currentCircle.startY * dpr / scale,
+                    r: currentCircle.r * dpr / scale
+                });
+                currentCircle = null;
+
+                renderWork();
+                renderPrecisionHelper(precisionHelper);
+            }
+            clearStatus();
+        }
+
+        function scaleCurrentCircle(s) {
+            // TODO what to do with x, y?
+
+            renderWork();
+            renderPrecisionHelper(precisionHelper);
+        }
+
+        // TODO translation/scaling should happen in image space, not canvas space! would it make sense, then, to store the current circle in image space? perhaps with angle instead of x,y to make scaling easier?
+        function moveCurrentCircle(x, y) {
+            currentCircle.startX += x;
+            currentCircle.startY += y;
+            currentCircle.x += x;
+            currentCircle.y += y;
+
+            renderWork();
+            renderPrecisionHelper(precisionHelper);
+        }
+
+        // TODO only enable this once image has been dropped and a selection has been made
+        $(document)
+            .keydown(event => {
+                let factor = 1;
+                if (event.shiftKey) {
+                    factor = 10;
                 }
+
+                console.log(event.which);
+
+                if (event.which == 13) {
+                    event.preventDefault();
+                    acceptCurrentCircle();
+                } else if (event.which == 38) {
+                    event.preventDefault();
+                    console.log("up");
+                    moveCurrentCircle(0, -factor);
+                } else if (event.which == 40) {
+                    event.preventDefault();
+                    moveCurrentCircle(0, factor);
+                } else if (event.which == 37) {
+                    event.preventDefault();
+                    moveCurrentCircle(-factor, 0);
+                } else if (event.which == 39) {
+                    event.preventDefault();
+                    moveCurrentCircle(factor, 0);
+                }
+                // TODO + 107??, - 109??, esc 27
             });
 
         function cropAndDownload(x, y, r) {
@@ -745,6 +819,7 @@
         function toggleShowOldSelections(checkbox) {
             showOldSelections = !!checkbox.checked;
             window.localStorage.setItem("show-old-selections", !!checkbox.checked ? "yes" : "no");
+            renderWork();  // TODO but only if image has already been dropped
         }
 
         function resetSettings() {
