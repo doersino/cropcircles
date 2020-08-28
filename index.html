@@ -271,7 +271,7 @@
 
         <hr>
 
-        <label><input type="checkbox" class="show-old-selections-checkbox" data-default="yes" onclick="toggleShowOldSelections(this);" checked> show old selections</label>
+        <label><input type="checkbox" class="show-old-selections-checkbox" data-default="yes" onclick="updateShowOldSelections(this);" checked> show old selections</label>
         <span>Show previously selected circles to help you keep track of what you've already done.</span>
 
         <label>
@@ -677,6 +677,22 @@
                 currentlySelectingCircle = false;
             });
 
+        function logicalCanvasToPhysicalCanvas(n) {
+            return n * dpr;
+        }
+        function physicalCanvasToImage(n) {
+            return n / scale;
+        }
+        function imageToPhysicalCanvas(n) {
+            return n * scale;
+        }
+        function physicalCanvasToLogicalCanvas(n) {
+            return n / dpr;
+        }
+        // TODO composition, or jsut define the ones i actually need
+        // TODO note that keeping all points etc. in image space will allow easy resizing of canvas if needed
+        // TODO need: logical to image (mouse tracking), image to physical (circle drawing), logical to physical (drawing of lines in precision helper), ...?
+
         function acceptCurrentCircle() {
             setStatus("Cropping image...", true);
             if (currentCircle.x != currentCircle.startX && currentCircle.y != currentCircle.startY) {
@@ -696,13 +712,18 @@
         }
 
         function scaleCurrentCircle(s) {
+            currentCircle.r += s;
+
             // TODO what to do with x, y?
+            currentCircle.x += s;
+            currentCircle.y += s;
 
             renderWork();
             renderPrecisionHelper(precisionHelper);
         }
 
         // TODO translation/scaling should happen in image space, not canvas space! would it make sense, then, to store the current circle in image space? perhaps with angle instead of x,y to make scaling easier?
+        // TODO => just implement the projection functions already!
         function moveCurrentCircle(x, y) {
             currentCircle.startX += x;
             currentCircle.startY += y;
@@ -726,19 +747,24 @@
                 if (event.which == 13) {
                     event.preventDefault();
                     acceptCurrentCircle();
-                } else if (event.which == 38) {
+                } else if (event.which == 87) {  // W
                     event.preventDefault();
-                    console.log("up");
                     moveCurrentCircle(0, -factor);
-                } else if (event.which == 40) {
+                } else if (event.which == 83) {  // S
                     event.preventDefault();
                     moveCurrentCircle(0, factor);
-                } else if (event.which == 37) {
+                } else if (event.which == 65) {  // A
                     event.preventDefault();
                     moveCurrentCircle(-factor, 0);
-                } else if (event.which == 39) {
+                } else if (event.which == 68) {  // D
                     event.preventDefault();
                     moveCurrentCircle(factor, 0);
+                } else if (event.which == 81) {  // Q
+                    event.preventDefault();
+                    scaleCurrentCircle(-factor);
+                } else if (event.which == 69) {  // E
+                    event.preventDefault();
+                    scaleCurrentCircle(factor);
                 }
                 // TODO + 107??, - 109??, esc 27
             });
@@ -775,13 +801,6 @@
 
                 URL.revokeObjectURL(url);
             }, "image/png");
-            /*var dummyLink = document.createElement("a");
-            dummyLink.setAttribute("href", elem.toDataURL("image/png")); // .replace("image/png", "image/octet-stream")
-            dummyLink.setAttribute("download", "cropcircles-x" + x + "y" + y + "r" + r + ".png");
-            dummyLink.style.display = "none";
-            document.body.appendChild(dummyLink);
-            dummyLink.click();
-            document.body.removeChild(dummyLink);*/
         }
 
 
@@ -809,14 +828,18 @@
             // restore settings from local storage
             if (showOldSelections = window.localStorage.getItem("show-old-selections")) {
                 showOldSelectionsCheckbox.checked = showOldSelections == "yes";
-                toggleShowOldSelections(showOldSelectionsCheckbox);
+                updateShowOldSelections(showOldSelectionsCheckbox);
+            } else {
+                updateShowOldSelections(showOldSelectionsCheckbox);
+                // TODO not sure why that's required since the variable is set to true.
+                // but if this line is not run: on first load with no local storage set yet, old circs don't show up until the checkbox is toggled twice
             }
 
             // TODO more
         }
         setup();
 
-        function toggleShowOldSelections(checkbox) {
+        function updateShowOldSelections(checkbox) {
             showOldSelections = !!checkbox.checked;
             window.localStorage.setItem("show-old-selections", !!checkbox.checked ? "yes" : "no");
             renderWork();  // TODO but only if image has already been dropped
@@ -824,7 +847,7 @@
 
         function resetSettings() {
             showOldSelectionsCheckbox.checked = showOldSelectionsCheckbox.getAttribute("data-default");
-            toggleShowOldSelections(showOldSelectionsCheckbox);
+            updateShowOldSelections(showOldSelectionsCheckbox);
         }
 
         function nukeLocalStorage() {
