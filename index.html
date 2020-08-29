@@ -10,7 +10,7 @@
             margin: 0;
             padding: 0;
         }
-        html {
+        :root {
             --font-size: 14px;
             --font-stack: "Iosevka Aile Web", monospace;
 
@@ -43,7 +43,12 @@
             --dropper-background-color: #555;
             --dropper-color: #aaa;
 
-
+            --current-selection-stroke: #fff;
+            --old-selections-stroke: rgba(255,255,255,0.5);
+            --old-selections-fill: rgba(255,255,255,0.2);
+            --precision-helper-dividers-stroke: #555;
+        }
+        html {
             font-size: var(--font-size);
             font-family: var(--font-stack);
             letter-spacing: -0.02em;
@@ -92,7 +97,7 @@
             padding: 0 0.2rem;
             border-radius: 0.2rem
         }
-        button, label, input[type="text"], select {
+        button, label, input[type="text"] {
             font: inherit;
             color: inherit;
             background-color: var(--input-background-color);
@@ -105,7 +110,7 @@
             text-transform: uppercase;
             border-radius: 0.2rem
         }
-        button:hover, label:hover, input[type="text"]:hover, label:hover select {
+        button:hover, label:hover, input[type="text"]:hover {
             background-color: var(--input-hover-background-color);
             border-color: var(--input-hover-border-color);
         }
@@ -113,10 +118,6 @@
             float: right;
             height: 0;
             margin-top: -0.3em;
-        }
-        select {
-            margin-top: 0.3em;
-            text-transform: none;
         }
         input[type="range"] {
             width: 100%;
@@ -309,19 +310,27 @@
         <span>Show previously selected circles to help you keep track of what you've already done.</span>
 
         <label>
-            image background<br>
-            <select class="zoom-level-slider" oninput="adjustZoomLevel(this.value)">
-                <option value="transparent">Transparent</option>
-                <option value="black">White</option>
-                <option value="white">Black</option>
-                <option value="keep-image-background">Keep Image Background</option>
-            </select>
+            <input type="range" min="0.1" max="2.0" step="0.1" value="1.0" data-default="1.0" class="precision-helper-zoom-slider" oninput="adjustPrecisionHelperZoom(this.value)">
+            <br>
+            <b>1.0×</b>
+            precision helper zoom
         </label>
-        <span>TODO dropdown for background color: transparent, black, white, image content</span>
+        <span>Adjusts the zoom level of the thumbnails shown in the precision helper below.</span>
 
-        <span>TODO zoom slider for precision helper: from 0.5x to 2x? would need to adjust cropped section of image, also radius accordingly</span>
+        <label><input type="checkbox" class="include-surroundings-checkbox" data-default="no" onclick="updateIncludeSurroundings(this);"> include surroundings</label>
+        <span>Instead of a transparent background, include the surroundings of the selection in the corners. Essentially turns the circular crop area into a rectangular crop area. You can widen the scope of the surroundings with the options below. TODO also: JPEG</span>
 
-        <span>TODO checkbox: include surroundings. implies image background "keep", includes 1/2 the radius around the selection. during circle drawing, show dotted preview of rect.</span>
+        TODO disable the settings below if "include surroundings" not true
+
+        <label>
+            <input type="range" min="0.0" max="2.0" step="0.1" value="0.0" data-default="0.0" class="vertical-surroundings-range-slider" oninput="adjustVerticalSurroundingsRange(this.value)">
+            <br>
+            <b>0<em style="text-transform: lowercase;">r</em></b>
+            vertical surroundings range TODO rename
+        </label>
+        <span>If set to a value ≠ 0, TODO more</span>
+
+        TODO same for horizontal
 
         <!--<button onclick="copySource(this);">copy source<b></b></button>
         <span>The copied source will be surrounded with asterisks, ready for pasting into a Markdeep document.</span>
@@ -381,8 +390,9 @@
         <h2>Basic Usage</h2>
         <p>1. Drop an image into the main area.</p>
         <p>2. Click and drag from a center point to make a circular selection.
-        <p>3. Keeping an eye on the precision helper in the bottom right, adjust the selection with the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> (or like a gamer via <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>); you can zoom in and out with <kbd>+</kbd> <kbd>-</kbd> (or <kbd>O</kbd> <kbd>P</kbd>. Press <kbd>shift</kbd> to adjust in 10× larger increments.</p>
-        <p>4. When satisfied, press <kbd>enter</kbd> to accept the selected circle – it will then download as a PNG image, tightly cropped around the bounds of the circle. TODO note how the corners are transparent (If you wish to cancel the current selection, press <kbd>esc</kbd>.)</p>
+        <p>3. Keeping an eye on the precision helper in the bottom right, adjust the selection with the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> (or with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>); you can increase or decrease the size of your selection with <kbd>+</kbd> <kbd>-</kbd> (or <kbd>P</kbd> <kbd>O</kbd>. Press <kbd>shift</kbd> to adjust in 20× larger increments.</p>
+        <p>4. When satisfied, press <kbd>enter</kbd> to accept the selected circle – it will then download as a PNG image, tightly cropped around the x and y bounds of the circle, with transparent corners. (If you wish to cancel the current selection, press <kbd>esc</kbd>.)</p>
+        <p>5. Repeat steps 2 through 4 for as many circles as you'd like to select.</p>
 
         <h2>Configuration</h2>
 
@@ -438,6 +448,12 @@
         /////////////
         // HELPERS //
         /////////////
+
+        // via https://gist.github.com/luciopaiva/01bda0d4311ccaecea0478ad2fd03108
+        function readCssVar(name) {
+            name = name.startsWith("--") ? name : "--" + name;
+            return window.getComputedStyle(document.documentElement).getPropertyValue(name);
+        }
 
         function logicalCanvasToImage(n) {  // for mouse tracking
             return n * dpr / scale;
@@ -564,7 +580,7 @@
             pc.clearRect(0, 0, W, H);
 
             pc.lineWidth = logicalCanvastoPhysicalCanvas(1);
-            pc.strokeStyle = "#fff";
+            pc.strokeStyle = readCssVar("current-selection-stroke");
 
             if (currentCircle) {
                 let image = document.getElementById("dropped-image");
@@ -572,8 +588,28 @@
                 let y = currentCircle.startY;
                 let r = currentCircle.r;
 
+                // TODO make this prettier, maybe it's possible to do all 9 cases in a general function like this?
+                function drawImageSquare(xx, yy) {  // x, y from -1, 0, 1
+                    let zoom = 1 / precisionHelperZoom;
+                    let rad = (xx != 0 && yy != 0) ? (r / Math.sqrt(2)) : r;  // corners
+                    pc.drawImage(
+                        image,
+                        x + (xx * rad) - w/6 * zoom,
+                        y + (yy * rad) - h/6 * zoom,
+                        w/3 * zoom,
+                        h/3 * zoom,
+                        (1 + xx) * W/3,
+                        (1 + yy) * H/3,
+                        W/3,
+                        H/3
+                        );
+                }
+
+                let selectionRadius = r * dpr * precisionHelperZoom;
+
                 // center
-                pc.drawImage(image, x - w/6, y - h/6, w/3, h/3, W/3, H/3, W/3, H/3);
+                //pc.drawImage(image, x - w/6 * precisionHelperZoom, y - h/6 * precisionHelperZoom, w/3 * precisionHelperZoom, h/3 * precisionHelperZoom, W/3, H/3, W/3, H/3);
+                drawImageSquare(0, 0);
                 pc.beginPath();
                 pc.moveTo(W/2-W/18, H/2-H/18);
                 pc.lineTo(W/2-W/72, H/2-H/72);
@@ -583,102 +619,110 @@
                 pc.lineTo(W/2+W/72, H/2-H/72);
                 pc.moveTo(W/2-W/72, H/2+H/72);
                 pc.lineTo(W/2-W/18, H/2+H/18);
-                pc.rect(W/2, H/2, 1, 1);
+                pc.rect(W/2, H/2, 0.5 * dpr, 0.5 * dpr);
                 pc.stroke();
 
                 // top
-                pc.drawImage(image, x - w/6, y - r - h/6, w/3, h/3, W/3, 0, W/3, H/3);
+                //pc.drawImage(image, x - w/6, y - r - h/6, w/3, h/3, W/3, 0, W/3, H/3);
+                drawImageSquare(0, -1);
                 pc.save();
                 pc.beginPath();
                 pc.rect(W/3, 0, W/3, H/3);
                 pc.closePath();
                 pc.clip();
                 pc.beginPath();
-                pc.arc(W/2, H/6 + r * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.arc(W/2, H/6 + selectionRadius, selectionRadius, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
 
                 // bottom
-                pc.drawImage(image, x - w/6, y + r - h/6, w/3, h/3, W/3, 2*H/3, W/3, H/3);
+                //pc.drawImage(image, x - w/6, y + r - h/6, w/3, h/3, W/3, 2*H/3, W/3, H/3);
+                drawImageSquare(0, 1);
                 pc.save();
                 pc.beginPath();
                 pc.rect(W/3, 2*H/3, W/3, H/3);
                 pc.closePath();
                 pc.clip();
                 pc.beginPath();
-                pc.arc(W/2, 5*H/6 - r * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.arc(W/2, 5*H/6 - selectionRadius, selectionRadius, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
 
                 // left
-                pc.drawImage(image, x - r - w/6, y - h/6, w/3, h/3, 0, H/3, W/3, H/3);
+                //pc.drawImage(image, x - r - w/6, y - h/6, w/3, h/3, 0, H/3, W/3, H/3);
+                drawImageSquare(-1, 0);
                 pc.save();
                 pc.beginPath();
                 pc.rect(0, H/3, W/3, H/3);
                 pc.closePath();
                 pc.clip();
                 pc.beginPath();
-                pc.arc(W/6 + r * dpr, H/2, r * dpr, 0, 2 * Math.PI);
+                pc.arc(W/6 + selectionRadius, H/2, selectionRadius, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
 
                 // right
-                pc.drawImage(image, x + r - w/6, y - h/6, w/3, h/3, 2*W/3, H/3, W/3, H/3);
+                //pc.drawImage(image, x + r - w/6, y - h/6, w/3, h/3, 2*W/3, H/3, W/3, H/3);
+                drawImageSquare(1, 0);
                 pc.save();
                 pc.beginPath();
                 pc.rect(2*W/3, H/3, W/3, H/3);
                 pc.closePath();
                 pc.clip();
                 pc.beginPath();
-                pc.arc(5*W/6 - r * dpr, H/2, r * dpr, 0, 2 * Math.PI);
+                pc.arc(5*W/6 - selectionRadius, H/2, selectionRadius, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
 
                 // top left
-                pc.drawImage(image, x - r/Math.sqrt(2) - w/6, y - r/Math.sqrt(2) - h/6, w/3, h/3, 0, 0, W/3, H/3);
+                //pc.drawImage(image, x - r/Math.sqrt(2) - w/6, y - r/Math.sqrt(2) - h/6, w/3, h/3, 0, 0, W/3, H/3);
+                drawImageSquare(-1, -1);
                 pc.save();
                 pc.beginPath();
                 pc.rect(0, 0, W/3, H/3);
                 pc.closePath();
                 pc.clip();
                 pc.beginPath();
-                pc.arc(W/6 + r/Math.sqrt(2) * dpr, H/6 + r/Math.sqrt(2) * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.arc(W/6 + selectionRadius / Math.sqrt(2), H/6 + selectionRadius / Math.sqrt(2), selectionRadius, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
 
                 // top right
-                pc.drawImage(image, x + r/Math.sqrt(2) - w/6, y - r/Math.sqrt(2) - h/6, w/3, h/3, 2*W/3, 0, W/3, H/3);
+                //pc.drawImage(image, x + r/Math.sqrt(2) - w/6, y - r/Math.sqrt(2) - h/6, w/3, h/3, 2*W/3, 0, W/3, H/3);
+                drawImageSquare(1, -1);
                 pc.save();
                 pc.beginPath();
                 pc.rect(2*W/3, 0, W/3, H/3);
                 pc.closePath();
                 pc.clip();
                 pc.beginPath();
-                pc.arc(5*W/6 - r/Math.sqrt(2) * dpr, H/6 + r/Math.sqrt(2) * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.arc(5*W/6 - selectionRadius / Math.sqrt(2), H/6 + selectionRadius / Math.sqrt(2), selectionRadius, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
 
                 // bottom left
-                pc.drawImage(image, x - r/Math.sqrt(2) - w/6, y + r/Math.sqrt(2) - h/6, w/3, h/3, 0, 2*H/3, W/3, H/3);
+                //pc.drawImage(image, x - r/Math.sqrt(2) - w/6, y + r/Math.sqrt(2) - h/6, w/3, h/3, 0, 2*H/3, W/3, H/3);
+                drawImageSquare(-1, 1);
                 pc.save();
                 pc.beginPath();
                 pc.rect(0, 2*H/3, W/3, H/3);
                 pc.closePath();
                 pc.clip();
                 pc.beginPath();
-                pc.arc(W/6 + r/Math.sqrt(2) * dpr, 5*H/6 - r/Math.sqrt(2) * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.arc(W/6 + selectionRadius / Math.sqrt(2), 5*H/6 - selectionRadius / Math.sqrt(2), selectionRadius, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
 
                 // bottom right
-                pc.drawImage(image, x + r/Math.sqrt(2) - w/6, y + r/Math.sqrt(2) - h/6, w/3, h/3, 2*W/3, 2*H/3, W/3, H/3);
+                //pc.drawImage(image, x + r/Math.sqrt(2) - w/6, y + r/Math.sqrt(2) - h/6, w/3, h/3, 2*W/3, 2*H/3, W/3, H/3);
+                drawImageSquare(1, 1);
                 pc.save();
                 pc.beginPath();
                 pc.rect(2*W/3, 2*H/3, W/3, H/3);
                 pc.closePath();
                 pc.clip();
                 pc.beginPath();
-                pc.arc(5*W/6 - r/Math.sqrt(2) * dpr, 5*H/6 - r/Math.sqrt(2) * dpr, r * dpr, 0, 2 * Math.PI);
+                pc.arc(5*W/6 - selectionRadius / Math.sqrt(2), 5*H/6 - selectionRadius / Math.sqrt(2), selectionRadius, 0, 2 * Math.PI);
                 pc.stroke();
                 pc.restore();
             }
@@ -693,17 +737,18 @@
             pc.moveTo(0, 2*H/3);
             pc.lineTo(W, 2*H/3);
             pc.lineWidth = logicalCanvastoPhysicalCanvas(2);
-            pc.strokeStyle = "#555";
+            pc.strokeStyle = readCssVar("precision-helper-dividers-stroke");
             pc.stroke();
         }
 
         function renderWork() {
             let wc = work.getContext("2d");
 
-            wc.clearRect(0, 0, work.width, work.height);  // TODO do this more neatly or is it neat enough?
+            wc.clearRect(0, 0, work.width, work.height);  // TODO do this more neatly or is it neat/fast enough?
 
             if (currentCircle) {
-                // TODO does it make more sense to store these values globally, for adjustment via keyboard shortcuts? probably!
+
+                wc.strokeStyle = readCssVar("current-selection-stroke");
 
                 wc.beginPath();
                 wc.setLineDash([logicalCanvastoPhysicalCanvas(6), logicalCanvastoPhysicalCanvas(4)]);
@@ -711,18 +756,31 @@
                 wc.moveTo(imageToPhysicalCanvas(currentCircle.startX), imageToPhysicalCanvas(currentCircle.startY));
                 wc.lineTo(imageToPhysicalCanvas(currentCircle.x), imageToPhysicalCanvas(currentCircle.y));
                 wc.lineWidth = logicalCanvastoPhysicalCanvas(1);
-                wc.strokeStyle = "#fff";
+                wc.stroke();
+                wc.setLineDash([]);
+
+                // TODO if include surroundings
+                wc.beginPath();
+                let h = 1.6;
+                let v = 0.3;
+                wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
+                wc.rect(
+                    imageToPhysicalCanvas(currentCircle.startX - (h + 1) * currentCircle.r),
+                    imageToPhysicalCanvas(currentCircle.startY - (v + 1) * currentCircle.r),
+                    imageToPhysicalCanvas((2 * h + 2) * currentCircle.r),
+                    imageToPhysicalCanvas((2 * v + 2) * currentCircle.r)
+                    );
                 wc.stroke();
                 wc.setLineDash([]);
             }
 
             if (showOldSelections) {
+                wc.strokeStyle = readCssVar("old-selections-stroke");
+                wc.fillStyle = readCssVar("old-selections-fill");
                 circles.forEach(circle => {
                     wc.beginPath();
                     wc.arc(circle.x * scale, circle.y * scale, circle.r * scale, 0, 2 * Math.PI);
-                    wc.fillStyle = "rgba(255,255,255,0.2)";
                     wc.fill();
-                    wc.strokeStyle = "rgba(255,255,255,0.5)";
                     wc.stroke();
                 });
             }
@@ -732,7 +790,7 @@
             .mousedown((event) => {
                 currentlySelectingCircle = true;
                 currentCircle = {
-                    startX: logicalCanvasToImage(event.pageX),  // - $("#work").offset().left if top left corner of canvas is not at (0,0)
+                    startX: logicalCanvasToImage(event.pageX),  // - $("#work").offset().left if top left corner of canvas were not at (0,0)
                     startY: logicalCanvasToImage(event.pageY),  // analogous
                     x: logicalCanvasToImage(event.pageX),
                     y: logicalCanvasToImage(event.pageY),
@@ -741,8 +799,8 @@
             })
             .mousemove((event) => {
                 if (currentlySelectingCircle) {
-                    x = logicalCanvasToImage(event.pageX);
-                    y = logicalCanvasToImage(event.pageY);
+                    x = logicalCanvasToImage(event.pageX);  // see caveat above
+                    y = logicalCanvasToImage(event.pageY);  // analogous
 
                     let dy = Math.abs(y - currentCircle.startY);
                     let dx = Math.abs(x - currentCircle.startX);
@@ -943,6 +1001,8 @@
 
         let showOldSelections = true;
         let showOldSelectionsCheckbox = document.querySelector(".show-old-selections-checkbox");
+        let precisionHelperZoom = 1;
+        let precisionHelperZoomSlider = document.querySelector(".precision-helper-zoom-slider");
 
         // process config, restore settings from local storage if existant
         function setupConfig() {
@@ -957,6 +1017,13 @@
                 // but if this line is not run: on first load with no local storage set yet, old circs don't show up until the checkbox is toggled twice
             }
 
+            if (precisionHelperZoom = window.localStorage.getItem("precision-helper-zoom")) {
+                precisionHelperZoomSlider.value = precisionHelperZoom;
+                adjustPrecisionHelperZoom(precisionHelperZoomSlider.value);
+            } else {
+                adjustPrecisionHelperZoom(precisionHelperZoomSlider.value);
+            }
+
             // TODO more settings
         }
 
@@ -966,13 +1033,23 @@
             renderWork();  // TODO but only if image has already been dropped
         }
 
+        function adjustPrecisionHelperZoom(zoom) {
+            precisionHelperZoom = zoom;
+            precisionHelperZoomSlider.parentNode.querySelector("b").innerHTML = precisionHelperZoom + "×";
+            window.localStorage.setItem("precision-helper-zoom", precisionHelperZoom);
+            renderPrecisionHelper();
+        }
+
         function resetSettings() {
             showOldSelectionsCheckbox.checked = showOldSelectionsCheckbox.getAttribute("data-default");
             updateShowOldSelections(showOldSelectionsCheckbox);
+            precisionHelperZoomSlider.value = precisionHelperZoomSlider.getAttribute("data-default");
+            adjustPrecisionHelperZoom(precisionHelperZoomSlider.value);
         }
 
         function nukeLocalStorage() {
             localStorage.removeItem("show-old-selections");
+            localStorage.removeItem("precision-helper-zoom");
         }
 
         //////////////////
