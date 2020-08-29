@@ -416,7 +416,6 @@
         // TODO now, implement:
         // * maybe a list in the sidebar, with a re-download possibility?
         // * think of additional, more useful settings
-        // * stroke colors from css variables, or js variables
         // * maybe get latlon from filename somehow? would need nw and se in there. then also have (linearly interpolated, no need to be fancy at these scales) latlon in output filename.
         // * on click, insert a circle the size of the previous circle? that could get around mi/km selection necessity
         // * similarly, on move or resize immediately after accepting a circle (i.e. before starting to draw a new one), make a copy of the just-accepted one and proceed with that
@@ -424,7 +423,7 @@
         // * make main drag area also pop up a file selector when clicked: https://stackoverflow.com/a/28075416
 
         // shower thoughts:
-        // TODO option: include surroundings. (replaces backgroudn drowpdown) slider: horiz distance to incldue in *r, vertical distance to include in *r => include background, emit jpg, display box preview during circle selecting
+        // TODO option: include surroundings. (replaces backgroudn drowpdown) slider: horiz distance to incldue in *r, vertical distance to include in *r => include background, emit jpg, display box preview during circle selecting <------ make this fully work!
         // TODO option: don't immediately downlaod upon selction acceptance
         // TODO clicking on prev circles redownloads them with current settings
         // TODO keep hash of image, along with circles, in local storage. provide means of backing local storage up (button!) and restoring it (mini drag area in sidebar? or just file selection button. or both!). (also wiping, i guess). => then, if user drags in a previously-dragged image, the previously-marked circles will show up. might then need a way of removing circles? hover and backspace? maybe highlight circles on hover
@@ -760,18 +759,21 @@
                 wc.setLineDash([]);
 
                 // TODO if include surroundings
-                wc.beginPath();
-                let h = 1.6;
-                let v = 0.3;
-                wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
-                wc.rect(
-                    imageToPhysicalCanvas(currentCircle.startX - (h + 1) * currentCircle.r),
-                    imageToPhysicalCanvas(currentCircle.startY - (v + 1) * currentCircle.r),
-                    imageToPhysicalCanvas((2 * h + 2) * currentCircle.r),
-                    imageToPhysicalCanvas((2 * v + 2) * currentCircle.r)
-                    );
-                wc.stroke();
-                wc.setLineDash([]);
+                if (includeSurroundings) {
+                    let h = horizonalSurroundingsRange;
+                    let v = verticalSurroundingsRange;
+
+                    wc.beginPath();
+                    wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
+                    wc.rect(
+                        imageToPhysicalCanvas(currentCircle.startX - (h + 1) * currentCircle.r),
+                        imageToPhysicalCanvas(currentCircle.startY - (v + 1) * currentCircle.r),
+                        imageToPhysicalCanvas((2 * h + 2) * currentCircle.r),
+                        imageToPhysicalCanvas((2 * v + 2) * currentCircle.r)
+                        );
+                    wc.stroke();
+                    wc.setLineDash([]);
+                }
             }
 
             if (showOldSelections) {
@@ -827,36 +829,56 @@
             let y = circle.y;
             let r = circle.r;
 
-            width = Math.ceil(r * 2);
-            height = Math.ceil(r * 2);
+            let imageType = "image/png";
+            let imageQuality = 1;
+            let imageExtension = ".png";
+            if (includeSurroundings) {
+                imageType = "image/jpeg";
+                imageExtension = ".jpg";
+            }
+
+            let width = Math.ceil(r * 2);
+            let height = Math.ceil(r * 2);
+            if (includeSurroundings) {
+                width += 2 * r * horizonalSurroundingsRange;
+                height += 2 * r * verticalSurroundingsRange;
+            }
 
             let image = document.getElementById("dropped-image");
             let croppedImage = document.getElementById("cropped-image");
+
             croppedImage.setAttribute("width", width);
             croppedImage.setAttribute("height", height);
+
             let cic = croppedImage.getContext("2d");
             cic.clearRect(0, 0, width, height);
-            cic.save();
-            cic.beginPath();
-            cic.arc(r, r, r, 0, 2 * Math.PI);
-            cic.closePath();
-            cic.clip();
-            cic.drawImage(image, x - r, y - r, width, height, 0, 0, width, height);
-            cic.restore();
+
+            if (includeSurroundings) {
+                cic.drawImage(image, x - r - r * horizonalSurroundingsRange, y - r - r * verticalSurroundingsRange, width, height, 0, 0, width, height);
+            }
+            else {
+                cic.save();
+                cic.beginPath();
+                cic.arc(r, r, r, 0, 2 * Math.PI);
+                cic.closePath();
+                cic.clip();
+                cic.drawImage(image, x - r, y - r, width, height, 0, 0, width, height);
+                cic.restore();
+            }
 
             croppedImage.toBlob(blob => {
                 let url = URL.createObjectURL(blob)
 
                 let dummyLink = document.createElement("a");
                 dummyLink.setAttribute("href", url);
-                dummyLink.setAttribute("download", "cropcircles-x" + parseInt(x) + "y" + parseInt(y) + "r" + parseInt(r) + ".png");
+                dummyLink.setAttribute("download", "cropcircles-x" + parseInt(x) + "y" + parseInt(y) + "r" + parseInt(r) + imageExtension);
                 dummyLink.style.display = "none";
                 document.body.appendChild(dummyLink);
                 dummyLink.click();
                 document.body.removeChild(dummyLink);
 
                 URL.revokeObjectURL(url);
-            }, "image/png");
+            }, imageType, imageQuality);
         }
 
 
@@ -1003,6 +1025,11 @@
         let showOldSelectionsCheckbox = document.querySelector(".show-old-selections-checkbox");
         let precisionHelperZoom = 1;
         let precisionHelperZoomSlider = document.querySelector(".precision-helper-zoom-slider");
+
+        // TODO
+        let includeSurroundings = true;
+        let horizonalSurroundingsRange = 1.6;
+        let verticalSurroundingsRange = 0.3;
 
         // process config, restore settings from local storage if existant
         function setupConfig() {
