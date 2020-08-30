@@ -119,6 +119,11 @@
             height: 0;
             margin-top: -0.3em;
         }
+        input[type="checkbox"] {
+            height: 1.25em;
+            margin-right: 0.3em;
+            vertical-align: text-bottom;  /* hack to make it look vertically centered in chrome but doesn't in firefox... hmm */
+        }
         input[type="range"] {
             width: 100%;
             margin: 0;
@@ -134,13 +139,18 @@
             outline: none;
         }
         label b {
-            font-weight: normal;
             float: right;
+            font-weight: normal;
+            text-transform: initial;
             color: var(--input-current-value-color);
         }
         span {
             font-size: 0.85em;
             display: block;
+        }
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
         }
         a.reset {
             display: inline-block;
@@ -157,7 +167,7 @@
             left: 0;
             height: 90vh;
             overflow: scroll;
-            max-width: 40em;
+            width: 40em;
             margin: 5vh 0 0 5vh;
             padding: 1em 4em 2em 2em;
             z-index: 10;
@@ -181,7 +191,7 @@
         }
 
         /* STATUS */
-        footer {
+        .status {
             position: fixed;
             right: 0;
             bottom: var(--sidebar-width);
@@ -192,7 +202,7 @@
             pointer-events: none;
             opacity: 1;
         }
-        footer.hidden {
+        .status.hidden {
             opacity: 0;
             transition: opacity 0.5s ease-out;
         }
@@ -307,30 +317,42 @@
         <hr>
 
         <label><input type="checkbox" class="show-old-selections-checkbox" data-default="yes" onclick="updateShowOldSelections(this);" checked> show old selections</label>
-        <span>Show previously selected circles to help you keep track of what you've already done.</span>
+        <span>Shows previously selected circles, which is helpful for keeping track of what you've already done.</span>
 
         <label>
-            <input type="range" min="0.1" max="2.0" step="0.1" value="1.0" data-default="1.0" class="precision-helper-zoom-slider" oninput="adjustPrecisionHelperZoom(this.value)">
+            <input type="range" min="0.1" max="2.0" step="0.1" value="1.0" data-default="1.0" class="precision-helper-zoom-slider" oninput="adjustPrecisionHelperZoom(this)">
             <br>
             <b>1.0×</b>
             precision helper zoom
         </label>
         <span>Adjusts the zoom level of the thumbnails shown in the precision helper below.</span>
 
-        <label><input type="checkbox" class="include-surroundings-checkbox" data-default="no" onclick="updateIncludeSurroundings(this);"> include surroundings</label>
-        <span>Instead of a transparent background, include the surroundings of the selection in the corners. Essentially turns the circular crop area into a rectangular crop area. You can widen the scope of the surroundings with the options below. TODO also: JPEG</span>
+        <hr>
 
-        TODO disable the settings below if "include surroundings" not true
+        <label><input type="checkbox" class="transparent-background-checkbox" data-default="yet" onclick="updateTransparentBackground(this);" checked> transparent background</label>
+        <span>If <em>un</em>checked, the surroundings of the circular selection will be visible in the corners of the final images – essentially, this turns the selection into a rectangle. You can add some margin with the options below. <!--Also, since in this case there is no need for transparency anymore, the final image will be a JPG instead of a PNG.--></span>
 
-        <label>
-            <input type="range" min="0.0" max="2.0" step="0.1" value="0.0" data-default="0.0" class="vertical-surroundings-range-slider" oninput="adjustVerticalSurroundingsRange(this.value)">
-            <br>
-            <b>0<em style="text-transform: lowercase;">r</em></b>
-            vertical surroundings range TODO rename
-        </label>
-        <span>If set to a value ≠ 0, TODO more</span>
+        <div class="margin-settings disabled">
+            <label>
+                <input type="range" min="0.0" max="4.0" step="0.1" value="0.0" data-default="0.0" class="vertical-margin-slider" oninput="adjustVerticalMargin(this)" disabled>
+                <br>
+                <b>0·<em>r</em></b>
+                vertical margin
+            </label>
+            <span>Above and below the circular core of the selection, include a vertical margin expressed as a fraction of the selection radius <em>r</em>.</span>
 
-        TODO same for horizontal
+            <label>
+                <input type="range" min="0.0" max="4.0" step="0.1" value="0.0" data-default="0.0" class="horizontal-margin-slider" oninput="adjustHorizontalMargin(this)" disabled>
+                <br>
+                <b>0·<em>r</em></b>
+                horizontal margin
+            </label>
+            <span>Analogous to the vertical margin, but towards the left and right.</span>
+        </div>
+
+        <hr>
+
+        TODO more
 
         <!--<button onclick="copySource(this);">copy source<b></b></button>
         <span>The copied source will be surrounded with asterisks, ready for pasting into a Markdeep document.</span>
@@ -364,12 +386,15 @@
         <hr>
 
         <p><span><em>These settings are continually written to local storage and will be restored when you close and reopen this page.</em></span></p>
+        <p><span>Nevertheless, TODO</span></p>
+        <button onclick="downloadSVG();">download settings</button>
+        <button onclick="downloadSVG();">restore settings...</button>
         <a class="reset" href="javascript:resetSettings();">reset settings</a>
     </aside>
     <aside class="precision-helper">
         <canvas id="prec"></canvas>
     </aside>
-    <footer class="hidden"></footer>
+    <footer class="status hidden"></footer>
     <main>
         <img id="base-image">
         <canvas id="work"></canvas>
@@ -411,10 +436,10 @@
         <p>TODO font, TODO inspo project, TODO mddb</p>
     </section>
 
-    <script src="https://code.jquery.com/jquery-latest.js" crossorigin="anonymous"></script>
     <script>
         // TODO now, implement:
-        // * maybe a list in the sidebar, with a re-download possibility?
+        // * on hover over a previous circle, highlight it. on click, show a little menu with delete, redownload
+        // * then, option: don't immediately downlaod upon selction acceptance
         // * think of additional, more useful settings
         // * maybe get latlon from filename somehow? would need nw and se in there. then also have (linearly interpolated, no need to be fancy at these scales) latlon in output filename.
         // * on click, insert a circle the size of the previous circle? that could get around mi/km selection necessity
@@ -423,8 +448,6 @@
         // * make main drag area also pop up a file selector when clicked: https://stackoverflow.com/a/28075416
 
         // shower thoughts:
-        // TODO option: include surroundings. (replaces backgroudn drowpdown) slider: horiz distance to incldue in *r, vertical distance to include in *r => include background, emit jpg, display box preview during circle selecting <------ make this fully work!
-        // TODO option: don't immediately downlaod upon selction acceptance
         // TODO clicking on prev circles redownloads them with current settings
         // TODO keep hash of image, along with circles, in local storage. provide means of backing local storage up (button!) and restoring it (mini drag area in sidebar? or just file selection button. or both!). (also wiping, i guess). => then, if user drags in a previously-dragged image, the previously-marked circles will show up. might then need a way of removing circles? hover and backspace? maybe highlight circles on hover
 
@@ -512,44 +535,42 @@
         // IMAGE DROPPING //
         ////////////////////
 
-        $('.dropper')
-            .on('dragover', (e) => {
-                e.preventDefault();
-            })
-            .on('drop', (e) => {
-                e.preventDefault();
-                setStatus("Setting up image...", true);
+        document.querySelector('.dropper').addEventListener('dragover', e => {
+            e.preventDefault();
+        });
+        document.querySelector('.dropper').addEventListener('drop', e => {
+            e.preventDefault();
+            setStatus("Setting up image...", true);
 
-                let files = e.originalEvent.dataTransfer.files;
-                if (files.length > 0) {
+            let files = e.dataTransfer.files;
+            if (files.length > 0) {
+                //console.log(files[0].name);
 
-                    // TODO error if more than 1 file?
-                    let reader = new FileReader();
-                    reader.onload = e => {
-                        setImage(e.target.result);
-                        clearStatus();
-                    };
-                    reader.readAsDataURL(files[0]);
-                }
-            });
+                // TODO error if more than 1 file?
+                let reader = new FileReader();
+                reader.onload = e => {
+                    setImage(e.target.result);
+                    clearStatus();
+                };
+                reader.readAsDataURL(files[0]);
+            }
+        });
 
-        $('.load-sample')
-            .on('click', (e) => {
-                e.preventDefault();
-                setStatus("Setting up sample image...", true);
-                setImage("sample.jpg");
-                clearStatus();
-            });
+        document.querySelector('.load-sample').addEventListener('click', e => {
+            e.preventDefault();
+            setStatus("Setting up sample image...", true);
+            setImage("sample.jpg");
+            clearStatus();
+        });
 
         function setImage(src) {
 
             // store the image in a hidden img tag
-            $("#dropped-image")
-                .load(() => {
-                    $(".dropper").hide();
-                    drawDroppedImage();
-                })
-                .attr("src", src);
+            document.getElementById("dropped-image").addEventListener('load', e => {
+                document.querySelector(".dropper").setAttribute("style", "display: none;");
+                drawDroppedImage();
+            });
+            document.getElementById("dropped-image").setAttribute("src", src);
         }
 
         function drawDroppedImage() {
@@ -559,10 +580,9 @@
             let scaleY = work.height / image.height;
             scale = Math.min(scaleX, scaleY);
 
-            $("#base-image")
-                .attr("src", image.src)
-                .attr("width", imageToLogicalCanvas(image.width))
-                .attr("height", imageToLogicalCanvas(image.height));
+            document.getElementById("base-image").setAttribute("src", image.src);
+            document.getElementById("base-image").setAttribute("width", imageToLogicalCanvas(image.width))
+            document.getElementById("base-image").setAttribute("height", imageToLogicalCanvas(image.height));
         }
 
         ////////////////////
@@ -746,7 +766,6 @@
             wc.clearRect(0, 0, work.width, work.height);  // TODO do this more neatly or is it neat/fast enough?
 
             if (currentCircle) {
-
                 wc.strokeStyle = readCssVar("current-selection-stroke");
 
                 wc.beginPath();
@@ -758,18 +777,14 @@
                 wc.stroke();
                 wc.setLineDash([]);
 
-                // TODO if include surroundings
-                if (includeSurroundings) {
-                    let h = horizonalSurroundingsRange;
-                    let v = verticalSurroundingsRange;
-
+                if (!transparentBackground) {
                     wc.beginPath();
                     wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
                     wc.rect(
-                        imageToPhysicalCanvas(currentCircle.startX - (h + 1) * currentCircle.r),
-                        imageToPhysicalCanvas(currentCircle.startY - (v + 1) * currentCircle.r),
-                        imageToPhysicalCanvas((2 * h + 2) * currentCircle.r),
-                        imageToPhysicalCanvas((2 * v + 2) * currentCircle.r)
+                        imageToPhysicalCanvas(currentCircle.startX - (horizontalMargin + 1) * currentCircle.r),
+                        imageToPhysicalCanvas(currentCircle.startY - (verticalMargin + 1) * currentCircle.r),
+                        imageToPhysicalCanvas((2 * horizontalMargin + 2) * currentCircle.r),
+                        imageToPhysicalCanvas((2 * verticalMargin + 2) * currentCircle.r)
                         );
                     wc.stroke();
                     wc.setLineDash([]);
@@ -788,36 +803,50 @@
             }
         }
 
-        $("#work")
-            .mousedown((event) => {
-                currentlySelectingCircle = true;
-                currentCircle = {
-                    startX: logicalCanvasToImage(event.pageX),  // - $("#work").offset().left if top left corner of canvas were not at (0,0)
-                    startY: logicalCanvasToImage(event.pageY),  // analogous
-                    x: logicalCanvasToImage(event.pageX),
-                    y: logicalCanvasToImage(event.pageY),
-                    r: 0
-                };
-            })
-            .mousemove((event) => {
-                if (currentlySelectingCircle) {
-                    x = logicalCanvasToImage(event.pageX);  // see caveat above
-                    y = logicalCanvasToImage(event.pageY);  // analogous
+        document.getElementById("work").addEventListener('mousedown', event => {
+            currentlySelectingCircle = true;
+            currentCircle = {
+                startX: logicalCanvasToImage(event.pageX),  // - left offset of #work wrt viewport if top left corner of canvas were not at (0,0)
+                startY: logicalCanvasToImage(event.pageY),  // analogous
+                x: logicalCanvasToImage(event.pageX),
+                y: logicalCanvasToImage(event.pageY),
+                r: 0
+            };
+        });
+        document.getElementById("work").addEventListener('mousemove', event => {
+            if (currentlySelectingCircle) {
+                let x = logicalCanvasToImage(event.pageX);  // see caveat above
+                let y = logicalCanvasToImage(event.pageY);  // analogous
 
-                    let dy = Math.abs(y - currentCircle.startY);
-                    let dx = Math.abs(x - currentCircle.startX);
-                    r = Math.sqrt(dx ** 2 + dy ** 2);
+                let dy = Math.abs(y - currentCircle.startY);
+                let dx = Math.abs(x - currentCircle.startX);
+                let r = Math.sqrt(dx ** 2 + dy ** 2);
 
-                    currentCircle.x = x;
-                    currentCircle.y = y;
-                    currentCircle.r = r;
-                    renderWork();
-                    renderPrecisionHelper();
-                }
-            })
-            .mouseup((event) => {
-                currentlySelectingCircle = false;
-            });
+                currentCircle.x = x;
+                currentCircle.y = y;
+                currentCircle.r = r;
+                renderWork();
+                renderPrecisionHelper();
+            }
+
+            // TODO provide context menu for circles
+            /*
+            if (showOldSelections) {
+                let x = logicalCanvasToImage(event.pageX);  // see caveat above
+                let y = logicalCanvasToImage(event.pageY);  // analogous
+                circles.forEach(c => {
+                    let dy = Math.abs(y - c.y);
+                    let dx = Math.abs(x - c.x);
+                    let r = Math.sqrt(dx ** 2 + dy ** 2);
+                    if (r < c.r) {
+                        console.log(c);
+                    }
+                });
+            }*/
+        });
+        document.getElementById("work").addEventListener('mouseup', event => {
+            currentlySelectingCircle = false;
+        });
 
 
         /////////////////////////
@@ -832,16 +861,16 @@
             let imageType = "image/png";
             let imageQuality = 1;
             let imageExtension = ".png";
-            if (includeSurroundings) {
+            if (!transparentBackground) {
                 imageType = "image/jpeg";
                 imageExtension = ".jpg";
             }
 
             let width = Math.ceil(r * 2);
             let height = Math.ceil(r * 2);
-            if (includeSurroundings) {
-                width += 2 * r * horizonalSurroundingsRange;
-                height += 2 * r * verticalSurroundingsRange;
+            if (!transparentBackground) {
+                width += 2 * r * horizontalMargin;
+                height += 2 * r * verticalMargin;
             }
 
             let image = document.getElementById("dropped-image");
@@ -853,8 +882,8 @@
             let cic = croppedImage.getContext("2d");
             cic.clearRect(0, 0, width, height);
 
-            if (includeSurroundings) {
-                cic.drawImage(image, x - r - r * horizonalSurroundingsRange, y - r - r * verticalSurroundingsRange, width, height, 0, 0, width, height);
+            if (!transparentBackground) {
+                cic.drawImage(image, x - r - r * horizontalMargin, y - r - r * verticalMargin, width, height, 0, 0, width, height);
             }
             else {
                 cic.save();
@@ -1002,9 +1031,9 @@
 
         // helper function for displaying status messages
         function setStatus(message, persist) {
-            let status = document.querySelector("footer");
+            let status = document.querySelector(".status");
             status.innerHTML = message;
-            status.className = "";
+            status.className = "status";
             if (!persist) {
                 setTimeout(clearStatus, 500);
             }
@@ -1012,8 +1041,8 @@
 
         // helper function for hiding the current status message
         function clearStatus() {
-            let status = document.querySelector("footer");
-            status.className = "hidden";
+            let status = document.querySelector(".status");
+            status.className = "status hidden";
         }
 
 
@@ -1026,10 +1055,14 @@
         let precisionHelperZoom = 1;
         let precisionHelperZoomSlider = document.querySelector(".precision-helper-zoom-slider");
 
-        // TODO
-        let includeSurroundings = true;
-        let horizonalSurroundingsRange = 1.6;
-        let verticalSurroundingsRange = 0.3;
+        let transparentBackground = true;
+        let transparentBackgroundCheckbox = document.querySelector(".transparent-background-checkbox");
+
+        let marginSettings = document.querySelector(".margin-settings");
+        let verticalMargin = 0;
+        let verticalMarginSlider = document.querySelector(".vertical-margin-slider");
+        let horizontalMargin = 0;
+        let horizontalMarginSlider = document.querySelector(".horizontal-margin-slider");
 
         // process config, restore settings from local storage if existant
         function setupConfig() {
@@ -1037,58 +1070,96 @@
             // restore settings from local storage
             if (showOldSelections = window.localStorage.getItem("show-old-selections")) {
                 showOldSelectionsCheckbox.checked = showOldSelections == "yes";
-                updateShowOldSelections(showOldSelectionsCheckbox);
-            } else {
-                updateShowOldSelections(showOldSelectionsCheckbox);
-                // TODO not sure why that's required since the variable is set to true.
-                // but if this line is not run: on first load with no local storage set yet, old circs don't show up until the checkbox is toggled twice
             }
+            updateShowOldSelections(showOldSelectionsCheckbox);
 
             if (precisionHelperZoom = window.localStorage.getItem("precision-helper-zoom")) {
                 precisionHelperZoomSlider.value = precisionHelperZoom;
-                adjustPrecisionHelperZoom(precisionHelperZoomSlider.value);
-            } else {
-                adjustPrecisionHelperZoom(precisionHelperZoomSlider.value);
             }
+            adjustPrecisionHelperZoom(precisionHelperZoomSlider);
 
-            // TODO more settings
+            if (transparentBackground = window.localStorage.getItem("transparent-background")) {
+                transparentBackgroundCheckbox.checked = transparentBackground == "yes";
+            }
+            updateTransparentBackground(transparentBackgroundCheckbox);
+
+            if (verticalMargin = window.localStorage.getItem("vertical-margin")) {
+                verticalMarginSlider.value = verticalMargin;
+            }
+            adjustVerticalMargin(verticalMarginSlider);
+
+            if (horizontalMargin = window.localStorage.getItem("horizontal-margin")) {
+                horizontalMarginSlider.value = horizontalMargin;
+            }
+            adjustHorizontalMargin(horizontalMarginSlider);
         }
 
         function updateShowOldSelections(checkbox) {
             showOldSelections = !!checkbox.checked;
             window.localStorage.setItem("show-old-selections", !!checkbox.checked ? "yes" : "no");
-            renderWork();  // TODO but only if image has already been dropped
+            renderWork();
         }
 
-        function adjustPrecisionHelperZoom(zoom) {
-            precisionHelperZoom = zoom;
+        function adjustPrecisionHelperZoom(slider) {
+            precisionHelperZoom = parseFloat(slider.value);
             precisionHelperZoomSlider.parentNode.querySelector("b").innerHTML = precisionHelperZoom + "×";
             window.localStorage.setItem("precision-helper-zoom", precisionHelperZoom);
             renderPrecisionHelper();
+        }
+
+        function updateTransparentBackground(checkbox) {
+            transparentBackground = !!checkbox.checked;
+            window.localStorage.setItem("transparent-background", !!checkbox.checked ? "yes" : "no");
+            if (transparentBackground) {
+                marginSettings.classList.add("disabled");
+                verticalMarginSlider.disabled = true;
+                horizontalMarginSlider.disabled = true;
+            } else {
+                marginSettings.classList.remove("disabled");
+                verticalMarginSlider.disabled = false;
+                horizontalMarginSlider.disabled = false;
+            }
+            renderWork();
+        }
+
+        function adjustVerticalMargin(slider) {
+            verticalMargin = parseFloat(slider.value);
+            verticalMarginSlider.parentNode.querySelector("b").innerHTML = verticalMargin + "·<em>r</em>";
+            window.localStorage.setItem("vertical-margin", verticalMargin);
+            renderWork();
+        }
+
+        function adjustHorizontalMargin(slider) {
+            horizontalMargin = parseFloat(slider.value);
+            horizontalMarginSlider.parentNode.querySelector("b").innerHTML = horizontalMargin + "·<em>r</em>";
+            window.localStorage.setItem("horizontal-margin", horizontalMargin);
+            renderWork();
         }
 
         function resetSettings() {
             showOldSelectionsCheckbox.checked = showOldSelectionsCheckbox.getAttribute("data-default");
             updateShowOldSelections(showOldSelectionsCheckbox);
             precisionHelperZoomSlider.value = precisionHelperZoomSlider.getAttribute("data-default");
-            adjustPrecisionHelperZoom(precisionHelperZoomSlider.value);
+            adjustPrecisionHelperZoom(precisionHelperZoomSlider);
+            transparentBackgroundCheckbox.checked = transparentBackgroundCheckbox.getAttribute("data-default");
+            updateTransparentBackground(transparentBackgroundCheckbox);
+            verticalMarginSlider.value = verticalMarginSlider.getAttribute("data-default");
+            adjustVerticalMargin(verticalMarginSlider);
+            horizontalMarginSlider.value = horizontalMarginSlider.getAttribute("data-default");
+            adjustHorizontalMargin(horizontalMarginSlider);
         }
 
-        function nukeLocalStorage() {
-            localStorage.removeItem("show-old-selections");
-            localStorage.removeItem("precision-helper-zoom");
-        }
 
         //////////////////
         // USER'S GUIDE //
         //////////////////
 
         function showUsersGuide() {
-            $(".users-guide").show();
+            document.querySelector(".users-guide").setAttribute("style", "display: block;");
         }
 
         function hideUsersGuide() {
-            $(".users-guide").hide();
+            document.querySelector(".users-guide").setAttribute("style", "display: none;");
         }
 
 
@@ -1096,16 +1167,14 @@
         // IT'S LIGHTS OUT AND AWAY WE GO //
         ////////////////////////////////////
 
-        $(document).ready(() => {
-            if (window.devicePixelRatio) {
-                dpr = window.devicePixelRatio;
-            }
+        if (window.devicePixelRatio) {
+            dpr = window.devicePixelRatio;
+        }
 
-            setupPrecisionHelper();
-            setupWork();
+        setupPrecisionHelper();
+        setupWork();
 
-            setupConfig();
-        });
+        setupConfig();
     </script>
 </body>
 </html>
