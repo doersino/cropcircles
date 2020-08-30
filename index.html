@@ -114,6 +114,9 @@
             background-color: var(--input-hover-background-color);
             border-color: var(--input-hover-border-color);
         }
+        button {
+            cursor: pointer;
+        }
         button b {
             float: right;
             height: 0;
@@ -266,6 +269,19 @@
             width: calc(100vw - var(--sidebar-width));
             cursor: crosshair;
         }
+        .circle-context-menu {
+            background-color: rgba(0,0,0,0.5);
+            position: fixed;
+            top: 10em;
+            left: 5em;
+            padding: 0.5em 1em 0.7em;
+            border-radius: 0 1em 1em 1em;
+        }
+        .circle-context-menu button {
+            width: auto;
+            margin-top: 0.5em;
+            display: inline-block;
+        }
 
         /* TODO clean up position absolute and fixed */
 
@@ -386,7 +402,7 @@
         <hr>
 
         <p><span><em>These settings are continually written to local storage and will be restored when you close and reopen this page.</em></span></p>
-        <p><span>Nevertheless, TODO</span></p>
+        <p><span>Nevertheless, TODO write + make these work!</span></p>
         <button onclick="downloadSVG();">download settings</button>
         <button onclick="downloadSVG();">restore settings...</button>
         <a class="reset" href="javascript:resetSettings();">reset settings</a>
@@ -407,6 +423,11 @@
     </main>
     <img id="dropped-image">
     <canvas id="cropped-image"></canvas>
+    <aside class="circle-context-menu">
+        <span>x: 4643, y: 2845, r: 200</span>
+        <button>download</button>
+        <button>delete</button>
+    </aside>
 
     <section class="users-guide">
         <a href="javascript:hideUsersGuide();" class="close">×</a>
@@ -439,16 +460,14 @@
     <script>
         // TODO now, implement:
         // * on hover over a previous circle, highlight it. on click, show a little menu with delete, redownload
-        // * then, option: don't immediately downlaod upon selction acceptance
-        // * think of additional, more useful settings
-        // * maybe get latlon from filename somehow? would need nw and se in there. then also have (linearly interpolated, no need to be fancy at these scales) latlon in output filename.
-        // * on click, insert a circle the size of the previous circle? that could get around mi/km selection necessity
+        // * then, option: don't immediately download upon selction acceptance
+        // * get-awareness: get latlon from filename. would need nw and se in there. then also have (linearly interpolated, no need to be fancy at these scales) latlon in output filename.
+        // * on click, insert a circle the size of the previous circle
         // * similarly, on move or resize immediately after accepting a circle (i.e. before starting to draw a new one), make a copy of the just-accepted one and proceed with that
-        // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice. otherwise, show a warning on resize?
+        // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice. otherwise, show a warning on resize? or maybe it's actually easy...
         // * make main drag area also pop up a file selector when clicked: https://stackoverflow.com/a/28075416
 
         // shower thoughts:
-        // TODO clicking on prev circles redownloads them with current settings
         // TODO keep hash of image, along with circles, in local storage. provide means of backing local storage up (button!) and restoring it (mini drag area in sidebar? or just file selection button. or both!). (also wiping, i guess). => then, if user drags in a previously-dragged image, the previously-marked circles will show up. might then need a way of removing circles? hover and backspace? maybe highlight circles on hover
 
         /////////////
@@ -846,6 +865,24 @@
         });
         document.getElementById("work").addEventListener('mouseup', event => {
             currentlySelectingCircle = false;
+
+            // TODO on click, copy previous selection
+            // TODO same on move?
+            /*if (currentCircle.r == 0 && circles.length > 0) {
+                let x = logicalCanvasToImage(event.pageX);  // see caveat above
+                let y = logicalCanvasToImage(event.pageY);  // analogous
+
+                let previousCircle = circles[circles.length-1];
+                currentCircle = {
+                    startX: x,
+                    startY: y,
+                    x: x + previousCircle.r / Math.sqrt(2),
+                    y: y - previousCircle.r / Math.sqrt(2),
+                    r: previousCircle.r
+                };
+                renderWork();
+                renderPrecisionHelper();
+            }*/
         });
 
 
