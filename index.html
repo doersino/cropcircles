@@ -274,19 +274,33 @@
             cursor: crosshair;
         }
 
-        .circle-context-menu {
-            background-color: rgba(0,0,0,0.5);
-            position: fixed;
-            top: 10em;
-            left: 5em;
-            padding: 0.5em 1em 0.7em;
-            border-radius: 0 1em 1em 1em;
+        .circles-table {
+            width: calc(100% + 2em);
+            margin-left: -1em;
+            border-spacing: 0;
         }
-        .circle-context-menu button {
+        .circles-table tr:hover {
+            background-color: var(--input-background-color);
+        }
+        .circles-table td {
+            padding: 0.25em;
+        }
+        .circles-table td:first-child {
+            padding-left: 1em;
+        }
+        .circles-table td:last-child {
+            text-align: right;
+            padding-right: 1em;
+        }
+        .circles-table button {
             width: auto;
-            margin-top: 0.5em;
+            margin: 0 0 0 -0.2em;
             display: inline-block;
-            padding: 0.2em 0.5em;
+            width: 1.5em;
+            height: 1.5em;
+            padding: 0.05em 0.3em;
+            text-align: center;
+            border-radius: 99em;
         }
 
         /* TODO clean up position absolute and fixed */
@@ -341,6 +355,34 @@
         </h1>
         <p>A tool for cropping circular <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery.</p>
         <span><strong>Usage:</strong> Provide an image, click and drag from a center point to make a selection, refine it with <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>+</kbd> <kbd>-</kbd>, then press <kbd>enter</kbd> to download the cropped result. <a href="javascript:showUsersGuide();">Learn more…</a></span>
+
+        <hr>
+
+        <table class="circles-table">
+            <thead>
+                <td>x (px)</td>
+                <td>y (px)</td>
+                <td>radius</td>
+                <td></td>
+            </thead>
+            <tr>
+                <td>4643</td>
+                <td>2845</td>
+                <td>200</td>
+                <td>
+                    <button>
+                        <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;">
+                            <path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path>
+                        </svg>
+                    </button>
+                    <button>
+                        <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;">
+                            <path d="M-10,-10 L10,10 M-10,10 L10,-10"></path>
+                        </svg>
+                    </button>
+                </td>
+            </tr>
+        </table>
 
         <hr>
 
@@ -435,19 +477,6 @@
     </main>
     <img id="dropped-image">
     <canvas id="cropped-image"></canvas>
-    <aside class="circle-context-menu">
-        <span>x: 4643, y: 2845, r: 200</span>
-        <button>
-            <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;">
-                <path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path>
-            </svg>
-        </button>
-        <button>
-            <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;">
-                <path d="M-10,-10 L10,10 M-10,10 L10,-10"></path>
-            </svg>
-        </button>
-    </aside>
 
     <section class="users-guide">
         <a href="javascript:hideUsersGuide();" class="close">×</a>
