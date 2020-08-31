@@ -40,12 +40,17 @@
             --input-placeholder-color: #777;
             --input-current-value-color: #aaa;
 
+            --input-danger-color: orangered;
+
             --dropper-background-color: #555;
             --dropper-color: #aaa;
 
             --current-selection-stroke: #fff;
             --old-selections-stroke: rgba(255,255,255,0.5);
             --old-selections-fill: rgba(255,255,255,0.2);
+            --highlighted-selection-stroke: rgba(255,255,255,0.8);
+            --highlighted-selection-fill: rgba(255,255,255,0.4);
+
             --precision-helper-dividers-stroke: #555;
         }
         html {
@@ -164,7 +169,7 @@
             text-transform: uppercase;
             text-decoration: none !important;
             font-size: 0.6em !important;
-            letter-spacing: 1px;
+            letter-spacing: 0.1em;
         }
 
         /* USER'S GUIDE */
@@ -274,23 +279,41 @@
             cursor: crosshair;
         }
 
+        /* OLD CIRCLES TABLE */
+        .circles-table-container.hidden {
+            display: none;
+        }
         .circles-table {
             width: calc(100% + 2em);
             margin-left: -1em;
             border-spacing: 0;
         }
+        .circles-table thead {
+            text-transform: uppercase;
+            font-size: 0.9em;
+            font-weight: 900;
+        }
         .circles-table tr:hover {
             background-color: var(--input-background-color);
         }
         .circles-table td {
-            padding: 0.25em;
+            padding: 0.25rem;
         }
         .circles-table td:first-child {
-            padding-left: 1em;
+            padding-left: 1rem;
         }
         .circles-table td:last-child {
             text-align: right;
-            padding-right: 1em;
+            padding-right: 1rem;
+        }
+        .circles-table u {
+            font-size: 0.8em;
+            font-style: italic;
+            text-decoration: none;
+            letter-spacing: -0.1em;
+        }
+        .circles-table span {
+            color: #aaa;
         }
         .circles-table button {
             width: auto;
@@ -301,6 +324,9 @@
             padding: 0.05em 0.3em;
             text-align: center;
             border-radius: 99em;
+        }
+        .circles-table .delete:hover {
+            color: var(--input-danger-color);
         }
 
         /* TODO clean up position absolute and fixed */
@@ -356,33 +382,22 @@
         <p>A tool for cropping circular <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery.</p>
         <span><strong>Usage:</strong> Provide an image, click and drag from a center point to make a selection, refine it with <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>+</kbd> <kbd>-</kbd>, then press <kbd>enter</kbd> to download the cropped result. <a href="javascript:showUsersGuide();">Learn more…</a></span>
 
-        <hr>
+        <section class="circles-table-container hidden">
+            <hr>
 
-        <table class="circles-table">
-            <thead>
-                <td>x (px)</td>
-                <td>y (px)</td>
-                <td>radius</td>
-                <td></td>
-            </thead>
-            <tr>
-                <td>4643</td>
-                <td>2845</td>
-                <td>200</td>
-                <td>
-                    <button>
-                        <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;">
-                            <path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path>
-                        </svg>
-                    </button>
-                    <button>
-                        <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;">
-                            <path d="M-10,-10 L10,10 M-10,10 L10,-10"></path>
-                        </svg>
-                    </button>
-                </td>
-            </tr>
-        </table>
+            <p><span>The following reverse-chronological table lists your old selections within this image, enabling redownloading and deletion.</span></p>
+
+            <table class="circles-table">
+                <thead>
+                    <td>x →</td>
+                    <td>y ↓</td>
+                    <td>radius</td>
+                    <td></td>
+                </thead>
+                <tbody id="circles-table-body">
+                </tbody>
+            </table>
+        </section>
 
         <hr>
 
@@ -402,7 +417,7 @@
         <label><input type="checkbox" class="transparent-background-checkbox" data-default="yet" onclick="updateTransparentBackground(this);" checked> transparent background</label>
         <span>If <em>un</em>checked, the surroundings of the circular selection will be visible in the corners of the final images – essentially, this turns the selection into a rectangle. You can add some margin with the options below. <!--Also, since in this case there is no need for transparency anymore, the final image will be a JPG instead of a PNG.--></span>
 
-        <div class="margin-settings disabled">
+        <section class="margin-settings disabled">
             <label>
                 <input type="range" min="0.0" max="4.0" step="0.1" value="0.0" data-default="0.0" class="vertical-margin-slider" oninput="adjustVerticalMargin(this)" disabled>
                 <br>
@@ -418,7 +433,7 @@
                 horizontal margin
             </label>
             <span>Analogous to the vertical margin, but towards the left and right.</span>
-        </div>
+        </section>
 
         <hr>
 
@@ -512,16 +527,15 @@
 
     <script>
         // TODO now, implement:
-        // * on hover over a previous circle, highlight it. on click, show a little menu with delete, redownload
-        // * then, option: don't immediately download upon selction acceptance
-        // * get-awareness: get latlon from filename. would need nw and se in there. then also have (linearly interpolated, no need to be fancy at these scales) latlon in output filename.
+        // * get-awareness: get latlon from filename. would need nw and se in there. then also have (linearly interpolated, no need to be fancy at these scales) latlon in output filename. adjust circles table accordingly.
         // * on click, insert a circle the size of the previous circle
+        // * option: don't immediately download upon selction acceptance
         // * similarly, on move or resize immediately after accepting a circle (i.e. before starting to draw a new one), make a copy of the just-accepted one and proceed with that
         // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice. otherwise, show a warning on resize? or maybe it's actually easy...
         // * make main drag area also pop up a file selector when clicked: https://stackoverflow.com/a/28075416
 
         // shower thoughts:
-        // TODO keep hash of image, along with circles, in local storage. provide means of backing local storage up (button!) and restoring it (mini drag area in sidebar? or just file selection button. or both!). (also wiping, i guess). => then, if user drags in a previously-dragged image, the previously-marked circles will show up. might then need a way of removing circles? hover and backspace? maybe highlight circles on hover
+        // TODO keep hash of image, along with circles, in local storage. provide means of backing local storage up (button!) and restoring it (mini drag area in sidebar? or just file selection button. or both!). (also wiping, i guess). => then, if user drags in a previously-dragged image, the previously-marked circles will show up
 
         /////////////
         // GLOBALS //
@@ -535,6 +549,8 @@
 
         let currentlySelectingCircle = false;
         let currentCircle = null;
+
+        let highlightedCircleId = null;
 
         let circles = [];
 
@@ -863,17 +879,30 @@
                 }
             }
 
-            if (showOldSelections) {
-                wc.strokeStyle = readCssVar("old-selections-stroke");
-                wc.fillStyle = readCssVar("old-selections-fill");
+            // TODO make this code clearer: if showOldSelections is true or there's currently one highlighted
+            if (showOldSelections || highlightedCircleId) {
                 circles.forEach(circle => {
-                    wc.beginPath();
-                    wc.arc(circle.x * scale, circle.y * scale, circle.r * scale, 0, 2 * Math.PI);
-                    wc.fill();
-                    wc.stroke();
+                    if (!showOldSelections || circle.id == highlightedCircleId) {
+                        wc.strokeStyle = readCssVar("highlighted-selection-stroke");
+                        wc.fillStyle = readCssVar("highlighted-selection-fill");
+                    } else {
+                        wc.strokeStyle = readCssVar("old-selections-stroke");
+                        wc.fillStyle = readCssVar("old-selections-fill");
+                    }
+                    if (showOldSelections || circle.id == highlightedCircleId) {
+                        wc.beginPath();
+                        wc.arc(imageToPhysicalCanvas(circle.x), imageToPhysicalCanvas(circle.y), imageToPhysicalCanvas(circle.r), 0, 2 * Math.PI);
+                        wc.fill();
+                        wc.stroke();
+                    }
                 });
             }
         }
+
+
+        //////////////////////
+        // CIRCLE SELECTION //
+        //////////////////////
 
         document.getElementById("work").addEventListener('mousedown', event => {
             currentlySelectingCircle = true;
@@ -900,50 +929,91 @@
                 renderWork();
                 renderPrecisionHelper();
             }
-
-            // TODO provide context menu for circles
-            /*
-            if (showOldSelections) {
-                let x = logicalCanvasToImage(event.pageX);  // see caveat above
-                let y = logicalCanvasToImage(event.pageY);  // analogous
-                circles.forEach(c => {
-                    let dy = Math.abs(y - c.y);
-                    let dx = Math.abs(x - c.x);
-                    let r = Math.sqrt(dx ** 2 + dy ** 2);
-                    if (r < c.r) {
-                        console.log(c);
-                    }
-                });
-            }*/
         });
         document.getElementById("work").addEventListener('mouseup', event => {
             currentlySelectingCircle = false;
 
-            // TODO on click, copy previous selection
-            // TODO same on move?
-            /*if (currentCircle.r == 0 && circles.length > 0) {
+            // on click, copy previous selection. currentCircle.r is always set here since it's been initialized in the mousedown event
+            if (currentCircle.r == 0 && circles.length > 0) {
                 let x = logicalCanvasToImage(event.pageX);  // see caveat above
                 let y = logicalCanvasToImage(event.pageY);  // analogous
+                console.log(currentCircle, x, y);
 
-                let previousCircle = circles[circles.length-1];
-                currentCircle = {
-                    startX: x,
-                    startY: y,
-                    x: x + previousCircle.r / Math.sqrt(2),
-                    y: y - previousCircle.r / Math.sqrt(2),
-                    r: previousCircle.r
-                };
-                renderWork();
-                renderPrecisionHelper();
-            }*/
+                cloneMostRecentSelectionAt(x, y);
+            }
         });
+
+        // TODO move this function to a better place
+        function cloneMostRecentSelectionAt(x, y) {
+            let previousCircle = circles[circles.length-1];
+            currentCircle = {
+                startX: x,
+                startY: y,
+                x: x + previousCircle.r / Math.sqrt(2),
+                y: y - previousCircle.r / Math.sqrt(2),
+                r: previousCircle.r
+            };
+            renderWork();
+            renderPrecisionHelper();
+        }
+
+
+        ///////////////////
+        // CIRCLES TABLE //
+        ///////////////////
+
+        function getCircle(id) {
+            return circles.find(c => c.id == id);
+        }
+
+        function addToTable(id) {
+            document.querySelector(".circles-table-container").classList.remove("hidden");
+
+            let table = document.getElementById("circles-table-body");
+            let circle = getCircle(id);
+
+            let cells = `
+                <td>${parseInt(circle.x)}<u>px</u> <span>46.234°</span></td>
+                <td>${parseInt(circle.y)}<u>px</u> <span>-120.34°</span></td>
+                <td>${parseInt(circle.r)}<u>px</u> <span>526m</span></td>
+                <td>
+                    <button onclick="cropAndDownload(${id})">
+                        <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path></svg>
+                    </button>
+                    <button onclick="deleteCircle(${id})" class="delete">
+                        <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M-10,-10 L10,10 M-10,10 L10,-10"></path></svg>
+                    </button>
+                </td>
+                `;
+
+            let tr = document.createElement("tr");
+            tr.id = id;
+            tr.setAttribute("onmouseover", "highlightCircle(" + id + ")");  // would register this with js, but that's almost less elegant than this
+            tr.setAttribute("onmouseout", "highlightCircle(null)");
+            tr.innerHTML = cells;
+
+            table.insertBefore(tr, table.firstChild);
+        }
+
+        function highlightCircle(id) {
+            highlightedCircleId = id;
+            renderWork();
+        }
+
+        function deleteCircle(id) {
+            circles = circles.filter(c => c.id != id);
+            document.getElementById(id).remove();
+            renderWork();
+        }
 
 
         /////////////////////////
         // CROPPING & DOWNLOAD //
         /////////////////////////
 
-        function cropAndDownload(circle) {
+        function cropAndDownload(id) {
+            let circle = getCircle(id);
+
             let x = circle.x;
             let y = circle.y;
             let r = circle.r;
@@ -1008,13 +1078,17 @@
         function acceptCurrentCircle() {
             setStatus("Cropping image...", true);
 
-            circles.push({
+            let circle = {
+                id: Date.now(),
                 x: currentCircle.startX,
                 y: currentCircle.startY,
                 r: currentCircle.r
-            });
+            };
+            circles.push(circle);
             currentCircle = null;
-            cropAndDownload(circles[circles.length-1]);
+
+            addToTable(circle.id);
+            cropAndDownload(circle.id);
 
             renderWork();
             renderPrecisionHelper();
@@ -1041,6 +1115,12 @@
         }
 
         function moveCurrentCircle(x, y) {
+            if (!currentCircle && circles.length > 0) {
+                let x0 = circles[circles.length-1].x;
+                let y0 = circles[circles.length-1].y;
+                cloneMostRecentSelectionAt(x0, y0);
+            }
+
             currentCircle.startX += x;
             currentCircle.startY += y;
             currentCircle.x += x;
