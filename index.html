@@ -314,6 +314,7 @@
         }
         .circles-table span {
             color: #aaa;
+            letter-spacing: -0.1em;
         }
         .circles-table button {
             width: auto;
@@ -411,6 +412,13 @@
             precision helper zoom
         </label>
         <span>Adjusts the zoom level of the thumbnails shown in the precision helper below.</span>
+
+        <label><input type="checkbox" class="download-immediately-checkbox" data-default="yes" onclick="updateDownloadImmediately(this);" checked> download immediately</label>
+        <span>Uncheck this if you prefer downloading your images through the table above <em>after</em> making a bunch of selections.</span>
+
+        <input type="text" class="filename-template-checkbox" data-default="cropcircles-x${x}y${y}r${r}" placeholder="output filename" value="">
+        TODO eventlistener: oninput? "onunfocus"?
+        <span>TODO output filename template. mention default "cropcircles-x${x}y${y}r${r}". do not include extension, it will be added automatically. TODO list of variables to use here</span>
 
         <hr>
 
@@ -515,6 +523,10 @@
 
         <p>⦿ TODO keep images below 100 megapixels – things get sluggish fast if you shoot past this limit. then again, i'm using a 5-year-old computer and perhaps not the fastest browser, so ymmv.</p>
 
+        TODO clicking, moving to "resurrect" old selection
+
+        TODO table usage
+
         <hr>
 
         <h2>Privacy Policy</h2>
@@ -528,9 +540,7 @@
     <script>
         // TODO now, implement:
         // * get-awareness: get latlon from filename. would need nw and se in there. then also have (linearly interpolated, no need to be fancy at these scales) latlon in output filename. adjust circles table accordingly.
-        // * on click, insert a circle the size of the previous circle
-        // * option: don't immediately download upon selction acceptance
-        // * similarly, on move or resize immediately after accepting a circle (i.e. before starting to draw a new one), make a copy of the just-accepted one and proceed with that
+        // * option: don't immediately download upon selection acceptance ("defer downloading")
         // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice. otherwise, show a warning on resize? or maybe it's actually easy...
         // * make main drag area also pop up a file selector when clicked: https://stackoverflow.com/a/28075416
 
@@ -541,11 +551,12 @@
         // GLOBALS //
         /////////////
 
-        let dpr = 1;
-        let scale = null;
-
         let precisionHelper = null;
         let work = null;
+
+        let dpr = 1;
+        let scale = null;
+        let geoRect = null;
 
         let currentlySelectingCircle = false;
         let currentCircle = null;
@@ -632,9 +643,11 @@
 
             let files = e.dataTransfer.files;
             if (files.length > 0) {
-                //console.log(files[0].name);
+                // TODO error if more than 1 file? in general, a way of presenting errors nicely?
 
-                // TODO error if more than 1 file?
+                let filename = files[0].name;
+                extractAndSetGeoRect(filename);
+
                 let reader = new FileReader();
                 reader.onload = e => {
                     setImage(e.target.result);
@@ -671,6 +684,78 @@
             document.getElementById("base-image").setAttribute("src", image.src);
             document.getElementById("base-image").setAttribute("width", imageToLogicalCanvas(image.width))
             document.getElementById("base-image").setAttribute("height", imageToLogicalCanvas(image.height));
+        }
+
+        ///////////////////
+        // GEO-AWARENESS //
+        ///////////////////
+
+        // TODO move this section to a better location?
+
+        function extractAndSetGeoRect(filename) {
+
+            // shoutout to https://regexr.com
+            let regex = /sw(-?\d+.\d+),(-?\d+.\d+)ne(-?\d+.\d+),(-?\d+.\d+)/;
+            let match = filename.match(regex);
+            if (match && match.length == 5) {
+                geoRect = {
+                    sw: {
+                        lat: parseFloat(match[1]),
+                        lon: parseFloat(match[2])
+                    },
+                    ne: {
+                        lat: parseFloat(match[3]),
+                        lon: parseFloat(match[4])
+                    }
+                };
+            }
+        }
+
+        // TODO note: x, y in image space
+        // TODO note: actually correct, even for large areas, taken from aerialbot
+        // TODO split into toLat and toLon?
+        function getLatLon(x, y) {
+            let image = document.getElementById("dropped-image");
+
+            // relativize
+            x /= image.width;
+            y /= image.height;
+
+            let radians = x => x * Math.PI / 180;
+            let degrees = x => x * 180 / Math.PI;
+
+            let west = geoRect.sw.lon;
+            let east = geoRect.ne.lon;
+            let width = east - west;
+            if (width < 0) {
+                width += 360;
+            }
+            let lon = west + width * x;
+            if (lon > 180) {
+                lon -= 360;
+            } else if (lon < -180) {
+                lon += 360;
+            }
+
+            let north = radians(geoRect.ne.lat);
+            let south = radians(geoRect.sw.lat);
+            let lat = degrees(Math.asin(y * (Math.sin(north) - Math.sin(south)) + Math.sin(south)));
+
+            return {lat: lat, lon: lon};
+        }
+
+        // TODO use this
+        function getCenterLatLon() {
+            return getLatLon(image.width / 2, image.height / 2);
+        }
+
+        // TODO: this is the length of n (image space pixels) in meters at lat,lon corresponding to x,y
+        function getMeters(x, y, n) {
+            //EARTH_CIRCUMFERENCE = 40075.016686 * 1000  # in meters, at the equator
+            //for 1deg of latitude: that times * cos( latitude ) / 360
+            //for xdeg of latitude: ???
+            // meters_per_pixel = ((EARTH_CIRCUMFERENCE / TILE_SIZE) * math.cos(math.radians(self.lat))) / (2 ** zoom)
+            // TODO https://stackoverflow.com/a/39540339
         }
 
         ////////////////////
@@ -972,10 +1057,21 @@
             let table = document.getElementById("circles-table-body");
             let circle = getCircle(id);
 
+            let lat = "";
+            let lon = "";
+            let rm = "";
+            if (geoRect) {
+                let latlon = getLatLon(circle.x, circle.y);
+                let m = getMeters(circle.r);
+                lat = `<span>${(latlon.lat + "").toString().substring(0,8)}°</span>`;
+                lon = `<span>${(latlon.lon + "").substring(0,8)}°</span>`;
+                rm = `<span>${(m + "").substring(0,6)}m</span>`;
+            }
+
             let cells = `
-                <td>${parseInt(circle.x)}<u>px</u> <span>46.234°</span></td>
-                <td>${parseInt(circle.y)}<u>px</u> <span>-120.34°</span></td>
-                <td>${parseInt(circle.r)}<u>px</u> <span>526m</span></td>
+                <td>${parseInt(circle.x)}<u>px</u> ${lon}</td>
+                <td>${parseInt(circle.y)}<u>px</u> ${lat}</td>
+                <td>${parseInt(circle.r)}<u>px</u> ${rm}</td>
                 <td>
                     <button onclick="cropAndDownload(${id})">
                         <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path></svg>
@@ -1088,7 +1184,9 @@
             currentCircle = null;
 
             addToTable(circle.id);
-            cropAndDownload(circle.id);
+            if (downloadImmediately) {
+                cropAndDownload(circle.id);
+            }
 
             renderWork();
             renderPrecisionHelper();
@@ -1224,6 +1322,8 @@
         let showOldSelectionsCheckbox = document.querySelector(".show-old-selections-checkbox");
         let precisionHelperZoom = 1;
         let precisionHelperZoomSlider = document.querySelector(".precision-helper-zoom-slider");
+        let downloadImmediately = true;
+        let downloadImmediatelyCheckbox = document.querySelector(".download-immediately-checkbox");
 
         let transparentBackground = true;
         let transparentBackgroundCheckbox = document.querySelector(".transparent-background-checkbox");
@@ -1247,6 +1347,11 @@
                 precisionHelperZoomSlider.value = precisionHelperZoom;
             }
             adjustPrecisionHelperZoom(precisionHelperZoomSlider);
+
+            if (downloadImmediately = window.localStorage.getItem("download-immediately")) {
+                downloadImmediatelyCheckbox.checked = downloadImmediately == "yes";
+            }
+            updateDownloadImmediately(downloadImmediatelyCheckbox);
 
             if (transparentBackground = window.localStorage.getItem("transparent-background")) {
                 transparentBackgroundCheckbox.checked = transparentBackground == "yes";
@@ -1275,6 +1380,11 @@
             precisionHelperZoomSlider.parentNode.querySelector("b").innerHTML = precisionHelperZoom + "×";
             window.localStorage.setItem("precision-helper-zoom", precisionHelperZoom);
             renderPrecisionHelper();
+        }
+
+        function updateDownloadImmediately(checkbox) {
+            downloadImmediately = !!checkbox.checked;
+            window.localStorage.setItem("download-immediately", !!checkbox.checked ? "yes" : "no");
         }
 
         function updateTransparentBackground(checkbox) {
@@ -1311,6 +1421,8 @@
             updateShowOldSelections(showOldSelectionsCheckbox);
             precisionHelperZoomSlider.value = precisionHelperZoomSlider.getAttribute("data-default");
             adjustPrecisionHelperZoom(precisionHelperZoomSlider);
+            downloadImmediatelyCheckbox.checked = downloadImmediatelyCheckbox.getAttribute("data-default");
+            updateDownloadImmediately(downloadImmediatelyCheckbox);
             transparentBackgroundCheckbox.checked = transparentBackgroundCheckbox.getAttribute("data-default");
             updateTransparentBackground(transparentBackgroundCheckbox);
             verticalMarginSlider.value = verticalMarginSlider.getAttribute("data-default");
