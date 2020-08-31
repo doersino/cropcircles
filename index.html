@@ -273,6 +273,7 @@
             width: calc(100vw - var(--sidebar-width));
             cursor: crosshair;
         }
+
         .circle-context-menu {
             background-color: rgba(0,0,0,0.5);
             position: fixed;
@@ -285,6 +286,7 @@
             width: auto;
             margin-top: 0.5em;
             display: inline-block;
+            padding: 0.2em 0.5em;
         }
 
         /* TODO clean up position absolute and fixed */
@@ -331,7 +333,7 @@
             </svg>
         </a>
         <h1>
-            Cr<svg viewBox="-105 -105 210 210" style="stroke: white; stroke-dasharray: 15 10; stroke-width: 10; fill: none;">
+            Cr<svg viewBox="-105 -105 210 210" style="stroke: currentColor; stroke-dasharray: 21 14; stroke-width: 10; fill: none;">
                 <path d="M0,0 L70.7,-70.7"></path>
                 <circle cx="0" cy="0" r="100" />
             </svg>p
@@ -435,8 +437,16 @@
     <canvas id="cropped-image"></canvas>
     <aside class="circle-context-menu">
         <span>x: 4643, y: 2845, r: 200</span>
-        <button>download</button>
-        <button>delete</button>
+        <button>
+            <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;">
+                <path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path>
+            </svg>
+        </button>
+        <button>
+            <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;">
+                <path d="M-10,-10 L10,10 M-10,10 L10,-10"></path>
+            </svg>
+        </button>
     </aside>
 
     <section class="users-guide">
