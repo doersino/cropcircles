@@ -2,7 +2,9 @@
 <html>
 <head>
     <meta charset="utf-8" lang="en">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Crop Circles</title>
+    <!-- TODO remove unneeded weights etc. -->
     <link rel="stylesheet" href="libs/ttf-iosevka-aile-3.4.6/iosevka-aile.css">
     <style>
         * {
@@ -203,6 +205,21 @@
             text-transform: uppercase;
             font-size: 1.5em;
             margin-top: 1.5em;
+        }
+
+        /* MOBILE ALERT */
+        .mobile-alert {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 2em;
+            background-color: #400;
+            display: none;
+        }
+        .mobile-alert-mobile,
+        .mobile-alert-tap {
+            display: none;
         }
 
         /* STATUS */
@@ -508,14 +525,16 @@
         <p>TODO iosevka, TODO inspo project, TODO mddb as base for sidebar, TODO mdn, TODO smaple image from google maps at https://www.google.com/maps/place/42°18'48.7%22N+113°51'19.8%22W/@42.3135278,-113.8576887,6000m/ and dl'd with aerialbot</p>
     </section>
 
+    <section class="mobile-alert">
+        Hi there! It looks like <em class="mobile-alert-mobile">you're using a mobile device</em><em class="mobile-alert-tap">you've just tapped the screen of your presumably-mobile device</em>. Sadly, this app was built with mouse and keyboard interaction in mind – please move over to an old-fashioned computer and proceed there.<br>
+        <a href="javascript:dismissMobileAlert()">You can also dismiss this alert.</a>
+    </section>
+
     <script>
         // TODO now, implement:
         // * keep hash of image, along with circles, in local storage. provide means of backing local storage up (button!) and restoring it (mini drag area in sidebar? or just file selection button. or both!). (also wiping, i guess). => then, if user drags in a previously-dragged image, the previously-marked circles will show up
         // * => things to base hash on: filename, width, height, size
         // * => also local storage backup and restore etc., plus settings-only export and import
-        // * show warning for mobile users
-        // * => as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent just check for "Mobi": https://stackoverflow.com/a/24600597
-        // * => or show if a touch event is fired? https://developer.mozilla.org/en-US/docs/Web/API/Touch_events
         // * make main drag area also pop up a file selector when clicked: https://stackoverflow.com/a/28075416
         // * make file download async so it wouldn't block?
         // * fix status messages: make async like umml compile status
@@ -1552,6 +1571,32 @@
         function hideUsersGuide() {
             document.querySelector(".users-guide").setAttribute("style", "display: none;");
         }
+
+
+        //////////////////
+        // MOBILE ALERT //
+        //////////////////
+
+        let mobileAlertAlreadyShown = false;
+        function dismissMobileAlert() {
+            document.querySelector(".mobile-alert").setAttribute("style", "display: none;");
+        }
+
+        // as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent and https://stackoverflow.com/a/24600597, throw an alert if the user agent contains "Mobi"
+        if (/Mobi/.test(navigator.userAgent)) {
+            document.querySelector(".mobile-alert").setAttribute("style", "display: block;");
+            document.querySelector(".mobile-alert-mobile").setAttribute("style", "display: inline;");
+            mobileAlertAlreadyShown = true;
+        }
+
+        // also throw alert if the screen is touched
+        document.addEventListener("touchstart", () => {
+            if (!mobileAlertAlreadyShown) {
+                document.querySelector(".mobile-alert").setAttribute("style", "display: block;");
+                document.querySelector(".mobile-alert-tap").setAttribute("style", "display: inline;");
+                mobileAlertAlreadyShown = true;
+            }
+        });
 
 
         ////////////////////////////////////
