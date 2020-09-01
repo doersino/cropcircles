@@ -500,7 +500,7 @@
 
         <h2>Privacy Policy</h2>
         <p>There isn't any server communication beyond the initial page load, so you should be safe. No analytics or trackers either. This tool is hosted on GitHub Pages, so I don't even have access to web server logs (but presumably, GitHub does).</p>
-        <p>But don't take my word for it: Just download this tool (TODO link), disconnect your device from the internet, open the tool in an incognito window, do your work, close the window, delete your local copy of the tool, then enable wifi again.</p>
+        <p>But, in the words of the inimitable LeVar Burton, <em>you don't have to take my word for it</em>: Just download this tool (TODO link), disconnect your device from the internet, open the tool in an incognito window, do your work, close the window, delete your local copy of the tool, then enable wifi again.</p>
 
         <h2>Credit</h2>
         <p>TODO iosevka, TODO inspo project, TODO mddb as base for sidebar, TODO mdn, TODO smaple image from google maps at https://www.google.com/maps/place/42°18'48.7%22N+113°51'19.8%22W/@42.3135278,-113.8576887,6000m/ and dl'd with aerialbot</p>
@@ -508,9 +508,6 @@
 
     <script>
         // TODO now, implement:
-        // * get-awareness: get latlon from filename. would need nw and se in there. then also have (linearly interpolated, no need to be fancy at these scales)
-        // NOW: => latlon in output filename
-        // TODO also, for highlighted selections, draw rectangle if transparency off
         // * option: don't immediately download upon selection acceptance ("defer downloading")
         // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice. otherwise, show a warning on resize? or maybe it's actually easy...
         // * make main drag area also pop up a file selector when clicked: https://stackoverflow.com/a/28075416
@@ -689,6 +686,9 @@
         // TODO split into toLat and toLon?
         function getLatLon(x, y) {
             let image = document.getElementById("dropped-image");
+
+            // invert y (since image y increases from top to bottom, but latitude increases from bottom to top)
+            y = image.height - y;
 
             // relativize
             x /= image.width;
@@ -1110,6 +1110,13 @@
             let y = circle.y;
             let r = circle.r;
 
+            let filename = "cropcircles-x" + parseInt(x) + "y" + parseInt(y) + "r" + parseInt(r);
+            if (geoRect) {
+                let latlon = getLatLon(x, y);
+                let m = getMeters(latlon.lat, latlon.lon, circle.r);
+                filename = "cropcircles-" + latlon.lat + "," + latlon.lon + "r" + m;
+            }
+
             let imageType = "image/png";
             let imageQuality = 1;
             let imageExtension = ".png";
@@ -1148,11 +1155,10 @@
             }
 
             croppedImage.toBlob(blob => {
-                let url = URL.createObjectURL(blob)
-
+                let url = URL.createObjectURL(blob);
                 let dummyLink = document.createElement("a");
                 dummyLink.setAttribute("href", url);
-                dummyLink.setAttribute("download", "cropcircles-x" + parseInt(x) + "y" + parseInt(y) + "r" + parseInt(r) + imageExtension);
+                dummyLink.setAttribute("download", filename + imageExtension);
                 dummyLink.style.display = "none";
                 document.body.appendChild(dummyLink);
                 dummyLink.click();
