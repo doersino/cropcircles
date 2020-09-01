@@ -141,6 +141,9 @@
             margin: 0;
             margin-bottom: 0.3em;
         }
+        input[type="text"] {
+            text-transform: none;
+        }
         input[type="text"]::placeholder {
             color: var(--input-placeholder-color);
         }
@@ -416,9 +419,8 @@
         <label><input type="checkbox" class="download-immediately-checkbox" data-default="yes" onclick="updateDownloadImmediately(this);" checked> download immediately</label>
         <span>Uncheck this if you prefer downloading your images through the table above <em>after</em> making a bunch of selections.</span>
 
-        <input type="text" class="filename-template-checkbox" data-default="cropcircles-x${x}y${y}r${r}" placeholder="output filename" value="">
-        TODO eventlistener: oninput? "onunfocus"?
-        <span>TODO output filename template. mention default "cropcircles-x${x}y${y}r${r}". do not include extension, it will be added automatically. TODO list of variables to use here</span>
+        <input type="text" class="filename-template-field" data-default="" placeholder="FILENAME TEMPLATE" value="" oninput="updateFilenameTemplate(this)">
+        <span>Template for the filenames of result images (but don't specify the file extension, it's added automatically). You can look up the list of template variables in <a href="">the user's guide TODO link (should be: sw...ne..., original filename, current time in iso form, circle id, some joke thingy?)</a>. If left empty, the default "cropcircles-x{x}y{y}r{r}" (plus "-{lat},{lon},{rm}m" if the current image <a href="">has geo data TODO link to section of users guide</a>) will be used.</span>
 
         <hr>
 
@@ -446,7 +448,7 @@
         <hr>
 
         <p><span><em>These settings are continually written to local storage and will be restored when you close and reopen this page.</em></span></p>
-        <p><span>Nevertheless, TODO write + make these work!</span></p>
+        <p><span>Nevertheless, TODO write + make these work! also, make them half-width, just cause cool.</span></p>
         <button onclick="downloadSVG();">download settings</button>
         <button onclick="downloadSVG();">restore settings...</button>
         <a class="reset" href="javascript:resetSettings();">reset settings</a>
@@ -508,12 +510,16 @@
 
     <script>
         // TODO now, implement:
-        // * option: don't immediately download upon selection acceptance ("defer downloading")
-        // * maybe support for browser resizing, but that's a buncha work for zero benefit in practice. otherwise, show a warning on resize? or maybe it's actually easy...
+        // * keep hash of image, along with circles, in local storage. provide means of backing local storage up (button!) and restoring it (mini drag area in sidebar? or just file selection button. or both!). (also wiping, i guess). => then, if user drags in a previously-dragged image, the previously-marked circles will show up
+        // * => things to base hash on: filename, width, height, size
+        // * => also local storage backup and restore etc., plus settings-only export and import
+        // * show warning for mobile users
+        // * => as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent just check for "Mobi": https://stackoverflow.com/a/24600597
+        // * => or show if a touch event is fired? https://developer.mozilla.org/en-US/docs/Web/API/Touch_events
         // * make main drag area also pop up a file selector when clicked: https://stackoverflow.com/a/28075416
-
-        // shower thoughts:
-        // TODO keep hash of image, along with circles, in local storage. provide means of backing local storage up (button!) and restoring it (mini drag area in sidebar? or just file selection button. or both!). (also wiping, i guess). => then, if user drags in a previously-dragged image, the previously-marked circles will show up
+        // * make file download async so it wouldn't block?
+        // * fix status messages: make async like umml compile status
+        // * TODO maybe "download all" (zip?, perhaps with a json file allowing re-import, plus the original image for good measure?) and "delete all" buttons at the bottom of the table
 
         /////////////
         // GLOBALS //
@@ -615,6 +621,7 @@
 
                 let filename = files[0].name;
                 extractAndSetGeoRect(filename);
+                console.log(files[0]);
 
                 let reader = new FileReader();
                 reader.onload = e => {
@@ -956,26 +963,29 @@
             if (highlightedCircleId) {
                 let circle = getCircle(highlightedCircleId)
 
-                wc.strokeStyle = readCssVar("highlighted-selection-stroke");
-                wc.fillStyle = readCssVar("highlighted-selection-fill");
+                // TODO note: it's possible for the to not be a circle for the passed id iff the user has just deleted a circle through the table in the sidebar – before the table row disappears, the mouseover event is fired at least one more time, calling this function
+                if (circle) {
+                    wc.strokeStyle = readCssVar("highlighted-selection-stroke");
+                    wc.fillStyle = readCssVar("highlighted-selection-fill");
 
-                wc.beginPath();
-                wc.arc(imageToPhysicalCanvas(circle.x), imageToPhysicalCanvas(circle.y), imageToPhysicalCanvas(circle.r), 0, 2 * Math.PI);
-                wc.fill();
-                wc.stroke();
-
-                // TODO deduplicate with code above
-                if (!transparentBackground) {
                     wc.beginPath();
-                    wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
-                    wc.rect(
-                        imageToPhysicalCanvas(circle.x - (horizontalMargin + 1) * circle.r),
-                        imageToPhysicalCanvas(circle.y - (verticalMargin + 1) * circle.r),
-                        imageToPhysicalCanvas((2 * horizontalMargin + 2) * circle.r),
-                        imageToPhysicalCanvas((2 * verticalMargin + 2) * circle.r)
-                        );
+                    wc.arc(imageToPhysicalCanvas(circle.x), imageToPhysicalCanvas(circle.y), imageToPhysicalCanvas(circle.r), 0, 2 * Math.PI);
+                    wc.fill();
                     wc.stroke();
-                    wc.setLineDash([]);
+
+                    // TODO deduplicate with code above
+                    if (!transparentBackground) {
+                        wc.beginPath();
+                        wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
+                        wc.rect(
+                            imageToPhysicalCanvas(circle.x - (horizontalMargin + 1) * circle.r),
+                            imageToPhysicalCanvas(circle.y - (verticalMargin + 1) * circle.r),
+                            imageToPhysicalCanvas((2 * horizontalMargin + 2) * circle.r),
+                            imageToPhysicalCanvas((2 * verticalMargin + 2) * circle.r)
+                            );
+                        wc.stroke();
+                        wc.setLineDash([]);
+                    }
                 }
             }
         }
@@ -986,6 +996,12 @@
         //////////////////////
 
         document.getElementById("work").addEventListener('mousedown', event => {
+
+            // only react when a normal click was performed
+            if (event.button != 0) {
+                return;
+            }
+
             currentlySelectingCircle = true;
             currentCircle = {
                 startX: logicalCanvasToImage(event.pageX),  // - left offset of #work wrt viewport if top left corner of canvas were not at (0,0)
@@ -1012,13 +1028,18 @@
             }
         });
         document.getElementById("work").addEventListener('mouseup', event => {
+
+            // only react when a normal click was performed
+            if (event.button != 0) {
+                return;
+            }
+
             currentlySelectingCircle = false;
 
             // on click, copy previous selection. currentCircle.r is always set here since it's been initialized in the mousedown event
             if (currentCircle.r == 0 && circles.length > 0) {
                 let x = logicalCanvasToImage(event.pageX);  // see caveat above
                 let y = logicalCanvasToImage(event.pageY);  // analogous
-                console.log(currentCircle, x, y);
 
                 cloneMostRecentSelectionAt(x, y);
             }
@@ -1061,7 +1082,7 @@
                 let m = getMeters(latlon.lat, latlon.lon, circle.r);
                 lat = `<span>${(latlon.lat + "").toString().substring(0,8)}°</span>`;
                 lon = `<span>${(latlon.lon + "").substring(0,8)}°</span>`;
-                rm = `<span>${(m + "").substring(0,6)}m</span>`;
+                rm = `<span>${parseInt(m)}m</span>`;
             }
 
             let cells = `
@@ -1103,6 +1124,52 @@
         // CROPPING & DOWNLOAD //
         /////////////////////////
 
+        function assembleFilename(id) {
+            let circle = getCircle(id);
+
+            let x = circle.x;
+            let y = circle.y;
+            let r = circle.r;
+
+            // super basic string variable replacement, via https://stackoverflow.com/a/1408373
+            let supplant = (s, o) => {
+                return s.replace(/{([^{}]*)}/g,
+                    function (a, b) {
+                        var r = o[b];
+                        return typeof r === 'string' || typeof r === 'number' ? r : a;
+                    }
+                );
+            };
+
+            let filenameVariables = {
+                x: parseInt(x),
+                y: parseInt(y),
+                r: parseInt(r)
+            }
+
+            if (geoRect) {
+                let latlon = getLatLon(x, y);
+                let rm = getMeters(latlon.lat, latlon.lon, circle.r);
+                filenameVariables = Object.assign(filenameVariables, {
+                    lat: latlon.lat,
+                    lon: latlon.lon,
+                    rm: rm
+                });
+            }
+
+            let filename = supplant(filenameTemplate, filenameVariables);
+
+            if (filename == "") {  // this means the template was not set
+                let defaultFilenameTemplate = "cropcircles-x{x}y{y}r{r}"
+                if (geoRect) {
+                    defaultFilenameTemplate += "-{lat},{lon},{rm}m"
+                }
+                filename = supplant(defaultFilenameTemplate, filenameVariables);
+            }
+
+            return filename;
+        }
+
         function cropAndDownload(id) {
             let circle = getCircle(id);
 
@@ -1110,12 +1177,7 @@
             let y = circle.y;
             let r = circle.r;
 
-            let filename = "cropcircles-x" + parseInt(x) + "y" + parseInt(y) + "r" + parseInt(r);
-            if (geoRect) {
-                let latlon = getLatLon(x, y);
-                let m = getMeters(latlon.lat, latlon.lon, circle.r);
-                filename = "cropcircles-" + latlon.lat + "," + latlon.lon + "r" + m;
-            }
+            let filename = assembleFilename(id);
 
             let imageType = "image/png";
             let imageQuality = 1;
@@ -1204,6 +1266,9 @@
 
         function scaleCurrentCircle(s) {
             currentCircle.r += s;
+            if (currentCircle.r < 0) {
+                currentCircle.r = 0;
+            }
 
             // this took some figuring out!
             let f = currentCircle.r / (currentCircle.r - s);
@@ -1214,6 +1279,7 @@
             renderPrecisionHelper();
         }
 
+        // TODO do nothing if there is not current circle (to avoid console errors more than anything) – the same goes for related functions
         function moveCurrentCircle(x, y) {
 
             // TODO comment: selection cloning on move: move it by 2r
@@ -1235,6 +1301,8 @@
 
         // TODO only enable this once image has been dropped and a selection has been made?
         window.addEventListener("keydown", function (event) {
+            // TODO disable this if the focus is on one of the inputs in the sidebar – interferes with filename input, possibly others too!
+
             let factor = 1;
             let larger = 20;
             if (event.shiftKey) {
@@ -1298,6 +1366,27 @@
         }, true);
 
 
+        /////////////////////
+        // WINDOW RESIZING //
+        /////////////////////
+
+        // TODO future changes to setupWork and drawDroppedImage might break this. safeguard agains this through abstraction or documentation!
+        window.addEventListener('resize', () => {
+            let h = window.innerHeight
+            let w = window.innerWidth - document.querySelector(".sidebar").offsetWidth;
+
+            let workElem = document.getElementById("work");
+
+            workElem.style.width = w + "px";
+            workElem.style.height = h + "px";
+            setupWork();
+
+            drawDroppedImage();  // this sets scale
+
+            renderWork();
+        });
+
+
         ////////////
         // STATUS //
         ////////////
@@ -1329,10 +1418,11 @@
         let precisionHelperZoomSlider = document.querySelector(".precision-helper-zoom-slider");
         let downloadImmediately = true;
         let downloadImmediatelyCheckbox = document.querySelector(".download-immediately-checkbox");
+        let filenameTemplate = "";
+        let filenameTemplateField = document.querySelector(".filename-template-field");
 
         let transparentBackground = true;
         let transparentBackgroundCheckbox = document.querySelector(".transparent-background-checkbox");
-
         let marginSettings = document.querySelector(".margin-settings");
         let verticalMargin = 0;
         let verticalMarginSlider = document.querySelector(".vertical-margin-slider");
@@ -1357,6 +1447,11 @@
                 downloadImmediatelyCheckbox.checked = downloadImmediately == "yes";
             }
             updateDownloadImmediately(downloadImmediatelyCheckbox);
+
+            if (filenameTemplate = window.localStorage.getItem("filename-template")) {
+                filenameTemplateField.value = filenameTemplate;
+            }
+            updateFilenameTemplate(filenameTemplateField);
 
             if (transparentBackground = window.localStorage.getItem("transparent-background")) {
                 transparentBackgroundCheckbox.checked = transparentBackground == "yes";
@@ -1390,6 +1485,11 @@
         function updateDownloadImmediately(checkbox) {
             downloadImmediately = !!checkbox.checked;
             window.localStorage.setItem("download-immediately", !!checkbox.checked ? "yes" : "no");
+        }
+
+        function updateFilenameTemplate(field) {
+            filenameTemplate = field.value;
+            window.localStorage.setItem("filename-template", filenameTemplate);
         }
 
         function updateTransparentBackground(checkbox) {
@@ -1428,6 +1528,9 @@
             adjustPrecisionHelperZoom(precisionHelperZoomSlider);
             downloadImmediatelyCheckbox.checked = downloadImmediatelyCheckbox.getAttribute("data-default");
             updateDownloadImmediately(downloadImmediatelyCheckbox);
+            filenameTemplateField.value = filenameTemplateField.getAttribute("data-default");
+            updateFilenameTemplate(filenameTemplateField);
+
             transparentBackgroundCheckbox.checked = transparentBackgroundCheckbox.getAttribute("data-default");
             updateTransparentBackground(transparentBackgroundCheckbox);
             verticalMarginSlider.value = verticalMarginSlider.getAttribute("data-default");
@@ -1441,6 +1544,7 @@
         // USER'S GUIDE //
         //////////////////
 
+        // TODO build way of showing it if not already visible and scrolling to a specific section
         function showUsersGuide() {
             document.querySelector(".users-guide").setAttribute("style", "display: block;");
         }
