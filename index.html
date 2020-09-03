@@ -42,7 +42,7 @@
             --input-placeholder-color: #777;
             --input-current-value-color: #aaa;
 
-            --input-danger-color: orangered;
+            --danger-color: orangered;
 
             --dropper-background-color: #555;
             --dropper-color: #aaa;
@@ -169,12 +169,32 @@
             opacity: 0.5;
             pointer-events: none;
         }
-        a.reset {
+        .backup-restore {
+            display: flex;
+        }
+        .backup-restore button {
+            margin: 0;
+        }
+        .backup-restore button:first-child {
             display: inline-block;
+            width: 13em;
+        }
+        .backup-restore button:last-child {
+            display: inline-block;
+            width: 100%;
+            margin-left: 0.5em;
+        }
+        .reset {
             text-transform: uppercase;
-            text-decoration: none !important;
-            font-size: 0.6em !important;
+            font-size: 0.67em;
             letter-spacing: 0.1em;
+        }
+        .reset a {
+            text-decoration: none;
+        }
+        .reset a:hover {
+            background-color: var(--danger-color);
+            color: var(--text-color);
         }
 
         /* USER'S GUIDE */
@@ -271,13 +291,22 @@
             border-radius: 1em;
             color: var(--dropper-color);
             font-size: 3em;
-            width: 40%;
+            width: 50%;
             margin: auto;
-            margin-top: 20vh;
+            margin-top: 25vh;
             padding: 4rem 2rem;
             text-align: center;
             font-weight: 500;
             letter-spacing: -0.05em;
+        }
+        .dropper.active .dropper-text {
+            background-color: inherit;
+            filter: invert(1);
+        }
+        .drop-or-select {
+            display: block;
+            font-style: normal;
+            cursor: pointer;
         }
         .load-sample {
             display: block;
@@ -347,16 +376,7 @@
             border-radius: 99em;
         }
         .circles-table .delete:hover {
-            color: var(--input-danger-color);
-        }
-
-
-        .circles-cache-io button,
-        .settings-io button {
-            display: inline-block;
-            width: auto;
-            font-size: 0.8em;
-            border-radius: 0;
+            color: var(--danger-color);
         }
 
         /* TODO clean up position absolute and fixed */
@@ -415,7 +435,7 @@
         <section class="circles-table-container hidden">
             <hr>
 
-            <p><span>The following reverse-chronological table lists your old selections within this image, enabling redownloading and deletion.</span></p>
+            <p><span>The following reverse-chronological table lists your selections within this image, enabling redownloading (with different settings, say) and deletion.</span></p>
 
             <table class="circles-table">
                 <thead>
@@ -428,7 +448,6 @@
             </table>
 
             <button onclick="cropAndDownloadAll();">download all as zip</button>
-            <span>The ZIP will also include a copy of the original image (TODO will this have the same number of bytes as the originally uploaded one? important for reupload of selection json), as well as a JSON file describing the selections TODO that you can import with the buttons at the bottom of this config sidebar. TODO and another json file for the options. anyway, TODO implement.</span>
         </section>
 
         <hr>
@@ -448,11 +467,11 @@
         <span>Uncheck this if you prefer downloading your images through the table above <em>after</em> making a bunch of selections.</span>
 
         <input type="text" class="filename-template-field" data-default="" placeholder="FILENAME TEMPLATE" value="" oninput="updateFilenameTemplate(this)">
-        <span>Template for the filenames of result images (but don't specify the file extension, it's added automatically). You can look up the list of template variables in <a href="">the user's guide TODO link (should be: sw...ne..., original filename, current time in iso form, circle id, some joke thingy?)</a>. If left empty, the default "cropcircles-x{x}y{y}r{r}" (plus "-{lat},{lon},{rm}m" if the current image <a href="">has geo data TODO link to section of users guide</a>) will be used.</span>
+        <span>Template for the filenames of result images (but don't specify the file extension, it's added automatically). You can look up the list of template variables in <a href="">the user's guide TODO link (should be: sw…ne…, original filename, current time in iso form, circle id, some joke thingy?)</a>. If left empty, the default "cropcircles-x{x}y{y}r{r}" (plus "-{lat},{lon},{rm}m" if the current image <a href="">has geo data TODO link to section of users guide</a>) will be used.</span>
 
         <hr>
 
-        <label><input type="checkbox" class="transparent-background-checkbox" data-default="yet" onclick="updateTransparentBackground(this);" checked> transparent background</label>
+        <label><input type="checkbox" class="transparent-background-checkbox" data-default="yes" onclick="updateTransparentBackground(this);" checked> transparent background</label>
         <span>If <em>un</em>checked, the surroundings of the circular selection will be visible in the corners of the final images – essentially, this turns the selection into a rectangle. You can add some margin with the options below. <!--Also, since in this case there is no need for transparency anymore, the final image will be a JPG instead of a PNG.--></span>
 
         <section class="margin-settings disabled">
@@ -478,22 +497,38 @@
 
         <hr>
 
-        <p><span><em>These settings, along with your selections, are continually written to local storage and will be restored when you close and reopen this page.</em></span></p>
-        <p><span>Nevertheless, TODO write + make these work! also, make them half-width, just cause cool.</span></p>
+        <p><span>These <em>settings</em> are continually written to your browser's <em>local storage</em>, so they will likely be restored when you close and reopen this page – but that's up to your browser's caching policies. You can back them up here and restore a previous backup:</span></p>
 
-        TODO local storage: download, restore (will be union'd with existing circles), red: clear
-        ``
-        <section class="circles-cache-io">
-            <button onclick="downloadSVG();">backup</button>
-            <button onclick="downloadSVG();">restore...</button>
-            <button onclick="downloadSVG();">wipe</button>
+        <!--for input: https://stackoverflow.com/a/26878895-->
+        <section class="backup-restore">
+            <button onclick="downloadSettings();">
+                <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path></svg>
+                back up
+            </button>
+            <input id="upload-settings" type="file" accept="application/json" style="display: none;">
+            <button onclick="restoreSettings();">
+                <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M0,10 L0,-10 M-10,0 L0,-10 L10,0"></path></svg>
+                restore…
+            </button>
+        </section>
+        <p><span>The same goes for your <em>selections</em>, both your current ones and ones you've made in previous sessions. This allows you to close this tool mid-work, reopen it, drag the same image in again, and continue selecting from where you left off – or a different image <a>covering an area</a> you've previously made selections in. Again, your browser might decide to evict this data from its cache, hence:</span></p>
+        <section class="backup-restore">
+            <button onclick="downloadSelection();">
+                <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path></svg>
+                back up
+            </button>
+            <input id="upload-circle-cache" type="file" accept="application/json" style="display: none;">
+            <button onclick="downloadSVG();">
+                <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M0,10 L0,-10 M-10,0 L0,-10 L10,0"></path></svg>
+                restore…
+            </button>
         </section>
 
-        <section class="settings-io">
-            <button onclick="downloadSVG();">backup</button>
-            <button onclick="downloadSVG();">restore...</button>
-            <button onclick="downloadSVG();">reset</button>
-        </section>
+        <hr>
+
+        <span class="reset">
+            <strong>Danger zone:</strong> <a href="javascript:resetSettingsToDefaults();">reset settings</a> or <a href="javascript:purgeSelectionCache();">purge selection cache</a>, in which case only your current selections will remain.
+        </span>
     </aside>
     <aside class="precision-helper">
         <canvas id="prec"></canvas>
@@ -504,7 +539,8 @@
         <canvas id="work"></canvas>
         <div class="dropper">
             <div class="dropper-text">
-                Drop image here
+                <input id="upload-image" type="file" accept="image/*" style="display: none;">
+                <em class="drop-or-select">Drop or <a>select</a> image…</em>
                 <em class="load-sample">…or <a>load sample</a>.</em>
             </div>
         </div>
@@ -526,6 +562,8 @@
         <p>5. Repeat steps 2 through 4 for as many circles as you'd like to select.</p>
 
         <h2>Configuration</h2>
+
+        The settings in the sidebar... TODO
 
         <p>TODO</p>
 
@@ -558,12 +596,10 @@
 
     <script>
         // TODO now, implement:
-        // * in preparation: rename startx, starty to x,y and x,y in currentcircle to px, py? also store latlon in circle object.
         // * keep hash of image, along with circles, in local storage. provide means of backing local storage up (button!) and restoring it (mini drag area in sidebar? or just file selection button. or both!). (also wiping, i guess). => then, if user drags in a previously-dragged image, the previously-marked circles will show up
         // * => things to base "hash" on: btoa(filename + width + height + size), somehow limit length?
         // * => also local storage backup and restore etc., plus settings-only export and import
         // * => convoluted notes: okay. get circles from hashed index in local storage atfirst. populate circles var, then call a to-write function that populates the table. then, if georect, check latlon cache for latlon circles. add any (to circles and list) whose id is not already in circles? need to keep latlon in circles list (or at least in latlon cache). then update local storage with newly assembled list? maybe have options for keeping circles in localstorage, separate for image-based and latlon-based? with “clear all circles from local storage” option, and the already-implemented-in-html ls download and ls upload (hmm, what to do when circles have already been marked manually upon upload? just replace (with warning) since this will also delete old circles for other images in local storage? or try to merge, since if the user wants a replacement, they could just delete all circles before import?) and settings reset functions?
-        // * make main drag area also pop up a file selector when clicked: https://stackoverflow.com/a/28075416
         // * make file setup and download async so it wouldn't block?
         // * => use a worker? https://stackoverflow.com/a/42800542
         // * fix status messages: make async like umml compile status?
@@ -655,38 +691,72 @@
         }
 
 
-        ////////////////////
-        // IMAGE DROPPING //
-        ////////////////////
+        ///////////////////
+        // IMAGE LOADING //
+        ///////////////////
 
         document.querySelector('.dropper').addEventListener('dragover', e => {
             e.preventDefault();
+            document.querySelector('.dropper').classList.add("active");
         });
+        document.querySelector('.dropper').addEventListener('dragleave', e => {
+            e.preventDefault();
+            document.querySelector('.dropper').classList.remove("active");
+        });
+
         document.querySelector('.dropper').addEventListener('drop', e => {
             e.preventDefault();
-            setStatus("Setting up image...", true);
+            setStatus("Setting up image…", true);
 
             let files = e.dataTransfer.files;
-            if (files.length > 0) {
-                // TODO error if more than 1 file? in general, a way of presenting errors nicely?
+            if (files.length == 1) {
 
-                let filename = files[0].name;
+                // TODO deduplicate this with button-press-way of adding a file
+                let file = files[0];
+
+                let filename = file.name;
                 extractAndSetGeoRect(filename);
-                console.log(files[0]);
-                console.log(btoa(files[0].name + files[0].size));
+                console.log(btoa(file.name + file.size));
 
                 let reader = new FileReader();
                 reader.onload = e => {
                     setImage(e.target.result);
                     clearStatus();
                 };
-                reader.readAsDataURL(files[0]);
+                reader.readAsDataURL(file);
+            } else {
+                // TODO error if more than 1 file? in general, a way of presenting errors nicely?
+            }
+        });
+
+        document.querySelector('.drop-or-select').addEventListener('click', e => {
+            e.preventDefault();
+            document.getElementById("upload-image").click();
+        });
+
+        document.getElementById("upload-image").addEventListener('change', e => {
+            let files = document.getElementById("upload-image").files;
+            if (files.length == 1) {
+                let file = files[0];
+
+                let filename = file.name;
+                extractAndSetGeoRect(filename);
+                console.log(btoa(file.name + file.size));
+
+                let reader = new FileReader();
+                reader.onload = e => {
+                    setImage(e.target.result);
+                    clearStatus();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // TODO error if more than 1 file? in general, a way of presenting errors nicely?
             }
         });
 
         document.querySelector('.load-sample').addEventListener('click', e => {
             e.preventDefault();
-            setStatus("Setting up sample image...", true);
+            setStatus("Setting up sample image…", true);
             let filename = "sample-sw42.286577541476696,-113.90409924217032ne42.340476458523305,-113.80691475782969.jpg";
             extractAndSetGeoRect(filename);
             setImage(filename);
@@ -810,7 +880,7 @@
 
                 // TODO make this prettier, maybe it's possible to do all 9 cases in a general function like this?
                 function drawImageSquare(xx, yy) {  // x, y from -1, 0, 1
-                    let zoom = 1 / precisionHelperZoom;
+                    let zoom = 1 / settings.precisionHelperZoom;
                     let rad = (xx != 0 && yy != 0) ? (r / Math.sqrt(2)) : r;  // corners
                     pc.drawImage(
                         image,
@@ -825,10 +895,9 @@
                         );
                 }
 
-                let selectionRadius = r * dpr * precisionHelperZoom;
+                let selectionRadius = r * dpr * settings.precisionHelperZoom;
 
                 // center
-                //pc.drawImage(image, x - w/6 * precisionHelperZoom, y - h/6 * precisionHelperZoom, w/3 * precisionHelperZoom, h/3 * precisionHelperZoom, W/3, H/3, W/3, H/3);
                 drawImageSquare(0, 0);
                 pc.beginPath();
                 pc.moveTo(W/2-W/18, H/2-H/18);
@@ -843,7 +912,6 @@
                 pc.stroke();
 
                 // top
-                //pc.drawImage(image, x - w/6, y - r - h/6, w/3, h/3, W/3, 0, W/3, H/3);
                 drawImageSquare(0, -1);
                 pc.save();
                 pc.beginPath();
@@ -856,7 +924,6 @@
                 pc.restore();
 
                 // bottom
-                //pc.drawImage(image, x - w/6, y + r - h/6, w/3, h/3, W/3, 2*H/3, W/3, H/3);
                 drawImageSquare(0, 1);
                 pc.save();
                 pc.beginPath();
@@ -869,7 +936,6 @@
                 pc.restore();
 
                 // left
-                //pc.drawImage(image, x - r - w/6, y - h/6, w/3, h/3, 0, H/3, W/3, H/3);
                 drawImageSquare(-1, 0);
                 pc.save();
                 pc.beginPath();
@@ -882,7 +948,6 @@
                 pc.restore();
 
                 // right
-                //pc.drawImage(image, x + r - w/6, y - h/6, w/3, h/3, 2*W/3, H/3, W/3, H/3);
                 drawImageSquare(1, 0);
                 pc.save();
                 pc.beginPath();
@@ -895,7 +960,6 @@
                 pc.restore();
 
                 // top left
-                //pc.drawImage(image, x - r/Math.sqrt(2) - w/6, y - r/Math.sqrt(2) - h/6, w/3, h/3, 0, 0, W/3, H/3);
                 drawImageSquare(-1, -1);
                 pc.save();
                 pc.beginPath();
@@ -908,7 +972,6 @@
                 pc.restore();
 
                 // top right
-                //pc.drawImage(image, x + r/Math.sqrt(2) - w/6, y - r/Math.sqrt(2) - h/6, w/3, h/3, 2*W/3, 0, W/3, H/3);
                 drawImageSquare(1, -1);
                 pc.save();
                 pc.beginPath();
@@ -921,7 +984,6 @@
                 pc.restore();
 
                 // bottom left
-                //pc.drawImage(image, x - r/Math.sqrt(2) - w/6, y + r/Math.sqrt(2) - h/6, w/3, h/3, 0, 2*H/3, W/3, H/3);
                 drawImageSquare(-1, 1);
                 pc.save();
                 pc.beginPath();
@@ -934,7 +996,6 @@
                 pc.restore();
 
                 // bottom right
-                //pc.drawImage(image, x + r/Math.sqrt(2) - w/6, y + r/Math.sqrt(2) - h/6, w/3, h/3, 2*W/3, 2*H/3, W/3, H/3);
                 drawImageSquare(1, 1);
                 pc.save();
                 pc.beginPath();
@@ -978,21 +1039,21 @@
                 wc.stroke();
                 wc.setLineDash([]);
 
-                if (!transparentBackground) {
+                if (!settings.transparentBackground) {
                     wc.beginPath();
                     wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
                     wc.rect(
-                        imageToPhysicalCanvas(currentCircle.x - (horizontalMargin + 1) * currentCircle.r),
-                        imageToPhysicalCanvas(currentCircle.y - (verticalMargin + 1) * currentCircle.r),
-                        imageToPhysicalCanvas((2 * horizontalMargin + 2) * currentCircle.r),
-                        imageToPhysicalCanvas((2 * verticalMargin + 2) * currentCircle.r)
+                        imageToPhysicalCanvas(currentCircle.x - (settings.horizontalMargin + 1) * currentCircle.r),
+                        imageToPhysicalCanvas(currentCircle.y - (settings.verticalMargin + 1) * currentCircle.r),
+                        imageToPhysicalCanvas((2 * settings.horizontalMargin + 2) * currentCircle.r),
+                        imageToPhysicalCanvas((2 * settings.verticalMargin + 2) * currentCircle.r)
                         );
                     wc.stroke();
                     wc.setLineDash([]);
                 }
             }
 
-            if (showOldSelections) {
+            if (settings.showOldSelections) {
                 wc.strokeStyle = readCssVar("old-selections-stroke");
                 wc.fillStyle = readCssVar("old-selections-fill");
                 circles.forEach(circle => {
@@ -1021,14 +1082,14 @@
                     wc.stroke();
 
                     // TODO deduplicate with code above
-                    if (!transparentBackground) {
+                    if (!settings.transparentBackground) {
                         wc.beginPath();
                         wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
                         wc.rect(
-                            imageToPhysicalCanvas(circle.x - (horizontalMargin + 1) * circle.r),
-                            imageToPhysicalCanvas(circle.y - (verticalMargin + 1) * circle.r),
-                            imageToPhysicalCanvas((2 * horizontalMargin + 2) * circle.r),
-                            imageToPhysicalCanvas((2 * verticalMargin + 2) * circle.r)
+                            imageToPhysicalCanvas(circle.x - (settings.horizontalMargin + 1) * circle.r),
+                            imageToPhysicalCanvas(circle.y - (settings.verticalMargin + 1) * circle.r),
+                            imageToPhysicalCanvas((2 * settings.horizontalMargin + 2) * circle.r),
+                            imageToPhysicalCanvas((2 * settings.verticalMargin + 2) * circle.r)
                             );
                         wc.stroke();
                         wc.setLineDash([]);
@@ -1198,7 +1259,7 @@
                 });
             }
 
-            let filename = supplant(filenameTemplate, filenameVariables);
+            let filename = supplant(settings.filenameTemplate, filenameVariables);
 
             if (filename == "") {  // this means the template was not set
                 let defaultFilenameTemplate = "cropcircles-x{x}y{y}r{r}"
@@ -1223,16 +1284,16 @@
             let imageType = "image/png";
             let imageQuality = 1;
             let imageExtension = ".png";
-            if (!transparentBackground) {
+            if (!settings.transparentBackground) {
                 imageType = "image/jpeg";
                 imageExtension = ".jpg";
             }
 
             let width = Math.ceil(r * 2);
             let height = Math.ceil(r * 2);
-            if (!transparentBackground) {
-                width += 2 * r * horizontalMargin;
-                height += 2 * r * verticalMargin;
+            if (!settings.transparentBackground) {
+                width += 2 * r * settings.horizontalMargin;
+                height += 2 * r * settings.verticalMargin;
             }
 
             let image = document.getElementById("dropped-image");
@@ -1244,8 +1305,8 @@
             let cic = croppedImage.getContext("2d");
             cic.clearRect(0, 0, width, height);
 
-            if (!transparentBackground) {
-                cic.drawImage(image, x - r - r * horizontalMargin, y - r - r * verticalMargin, width, height, 0, 0, width, height);
+            if (!settings.transparentBackground) {
+                cic.drawImage(image, x - r - r * settings.horizontalMargin, y - r - r * settings.verticalMargin, width, height, 0, 0, width, height);
             }
             else {
                 cic.save();
@@ -1277,7 +1338,7 @@
         //////////////////////////
 
         function acceptCurrentCircle() {
-            setStatus("Cropping image...", true);
+            setStatus("Cropping image…", true);
 
             let circle = {
                 id: Date.now(),
@@ -1306,7 +1367,7 @@
             currentCircle = null;
 
             addToTable(circle.id);
-            if (downloadImmediately) {
+            if (settings.downloadImmediately) {
                 cropAndDownload(circle.id);
             }
 
@@ -1359,7 +1420,12 @@
 
         // TODO only enable this once image has been dropped and a selection has been made?
         window.addEventListener("keydown", function (event) {
-            // TODO disable this if the focus is on one of the inputs in the sidebar – interferes with filename input, possibly others too!
+
+            // disable this if the focus is on one of the inputs in the sidebar – interferes with filename input, possibly others too!
+            // or if any modifiers are pressed – the user is trying to interact with their browser, not with me!
+            if (event.target.tagName == "INPUT" || event.ctrlKey || event.altKey || event.metaKey) {
+                return;
+            }
 
             let factor = 1;
             let larger = 20;
@@ -1455,7 +1521,7 @@
             status.innerHTML = message;
             status.className = "status";
             if (!persist) {
-                setTimeout(clearStatus, 500);
+                setTimeout(clearStatus, 2000);
             }
         }
 
@@ -1466,94 +1532,162 @@
         }
 
 
-        ////////////
-        // CONFIG //
-        ////////////
+        //////////////
+        // SETTINGS //
+        //////////////
 
-        let showOldSelections = true;
+        let settings = {
+            showOldSelections: null,
+            precisionHelperZoom: null,
+            downloadImmediately: null,
+            filenameTemplate: null,
+            transparentBackground: null,
+            verticalMargin: null,
+            horizontalMargin: null
+        }
+
         let showOldSelectionsCheckbox = document.querySelector(".show-old-selections-checkbox");
-        let precisionHelperZoom = 1;
         let precisionHelperZoomSlider = document.querySelector(".precision-helper-zoom-slider");
-        let downloadImmediately = true;
         let downloadImmediatelyCheckbox = document.querySelector(".download-immediately-checkbox");
-        let filenameTemplate = "";
         let filenameTemplateField = document.querySelector(".filename-template-field");
 
-        let transparentBackground = true;
         let transparentBackgroundCheckbox = document.querySelector(".transparent-background-checkbox");
         let marginSettings = document.querySelector(".margin-settings");
-        let verticalMargin = 0;
         let verticalMarginSlider = document.querySelector(".vertical-margin-slider");
-        let horizontalMargin = 0;
         let horizontalMarginSlider = document.querySelector(".horizontal-margin-slider");
 
-        // process config, restore settings from local storage if existant
-        function setupConfig() {
-
-            // restore settings from local storage
-            if (showOldSelections = window.localStorage.getItem("show-old-selections")) {
-                showOldSelectionsCheckbox.checked = showOldSelections == "yes";
+        function initSettingsFromLocalStorage() {
+            let s = window.localStorage.getItem("cropcircles-settings");
+            try {
+                settings = JSON.parse(s);
+            } catch (e) {
+                resetSettingsToDefaults();
             }
+        }
+
+        function writeSettingsToLocalStorage() {
+            window.localStorage.setItem("cropcircles-settings", JSON.stringify(settings));
+        }
+
+        function downloadSettings() {
+            let url = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settings));
+            let dummyLink = document.createElement("a");
+            dummyLink.setAttribute("href", url);
+            dummyLink.setAttribute("download", "cropcircles-settings.json");
+            dummyLink.style.display = "none";
+            document.body.appendChild(dummyLink);
+            dummyLink.click();
+            document.body.removeChild(dummyLink);
+        }
+
+        function restoreSettings() {
+            document.getElementById("upload-settings").click();
+        }
+
+        document.getElementById("upload-settings").addEventListener('change', e => {
+            let files = document.getElementById("upload-settings").files;
+            if (files.length == 1) {
+                let file = files[0];
+
+                let filename = file.name;
+
+                let reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        let s = e.target.result;
+                        console.log(settings);
+                        settings = JSON.parse(s);
+                        console.log(settings);
+                        applySettingsView();
+                        setStatus("Successfully restored settings from \"" + filename + "\".")
+
+                        // forget about the file, allowing the event handler to fire again if the user uploads the same file again
+                        document.getElementById("upload-settings").value = "";
+                    } catch (e) {
+                        // TODO show error message
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                // TODO error if more than 1 file? in general, a way of presenting errors nicely?
+            }
+        });
+
+        function applySettingsView() {
+
+            // adjust dom to match settings
+            showOldSelectionsCheckbox.checked = settings.showOldSelections;
             updateShowOldSelections(showOldSelectionsCheckbox);
 
-            if (precisionHelperZoom = window.localStorage.getItem("precision-helper-zoom")) {
-                precisionHelperZoomSlider.value = precisionHelperZoom;
-            }
+            precisionHelperZoomSlider.value = settings.precisionHelperZoom;
             adjustPrecisionHelperZoom(precisionHelperZoomSlider);
 
-            if (downloadImmediately = window.localStorage.getItem("download-immediately")) {
-                downloadImmediatelyCheckbox.checked = downloadImmediately == "yes";
-            }
+            downloadImmediatelyCheckbox.checked = settings.downloadImmediately;
             updateDownloadImmediately(downloadImmediatelyCheckbox);
 
-            if (filenameTemplate = window.localStorage.getItem("filename-template")) {
-                filenameTemplateField.value = filenameTemplate;
-            }
+            filenameTemplateField.value = settings.filenameTemplate;
             updateFilenameTemplate(filenameTemplateField);
 
-            if (transparentBackground = window.localStorage.getItem("transparent-background")) {
-                transparentBackgroundCheckbox.checked = transparentBackground == "yes";
-            }
+            transparentBackgroundCheckbox.checked = settings.transparentBackground;
             updateTransparentBackground(transparentBackgroundCheckbox);
 
-            if (verticalMargin = window.localStorage.getItem("vertical-margin")) {
-                verticalMarginSlider.value = verticalMargin;
-            }
+            verticalMarginSlider.value = settings.verticalMargin;
             adjustVerticalMargin(verticalMarginSlider);
 
-            if (horizontalMargin = window.localStorage.getItem("horizontal-margin")) {
-                horizontalMarginSlider.value = horizontalMargin;
-            }
+            horizontalMarginSlider.value = settings.horizontalMargin;
+            adjustHorizontalMargin(horizontalMarginSlider);
+        }
+
+        function setupSettings() {
+            initSettingsFromLocalStorage();
+            applySettingsView();
+        }
+
+        function resetSettingsToDefaults() {
+            showOldSelectionsCheckbox.checked = showOldSelectionsCheckbox.getAttribute("data-default") == "yes";
+            updateShowOldSelections(showOldSelectionsCheckbox);
+            precisionHelperZoomSlider.value = precisionHelperZoomSlider.getAttribute("data-default");
+            adjustPrecisionHelperZoom(precisionHelperZoomSlider);
+            downloadImmediatelyCheckbox.checked = downloadImmediatelyCheckbox.getAttribute("data-default") == "yes";
+            updateDownloadImmediately(downloadImmediatelyCheckbox);
+            filenameTemplateField.value = filenameTemplateField.getAttribute("data-default");
+            updateFilenameTemplate(filenameTemplateField);
+
+            transparentBackgroundCheckbox.checked = transparentBackgroundCheckbox.getAttribute("data-default") == "yes";
+            updateTransparentBackground(transparentBackgroundCheckbox);
+            verticalMarginSlider.value = verticalMarginSlider.getAttribute("data-default");
+            adjustVerticalMargin(verticalMarginSlider);
+            horizontalMarginSlider.value = horizontalMarginSlider.getAttribute("data-default");
             adjustHorizontalMargin(horizontalMarginSlider);
         }
 
         function updateShowOldSelections(checkbox) {
-            showOldSelections = !!checkbox.checked;
-            window.localStorage.setItem("show-old-selections", !!checkbox.checked ? "yes" : "no");
+            settings.showOldSelections = !!checkbox.checked;
+            writeSettingsToLocalStorage();
             renderWork();
         }
 
         function adjustPrecisionHelperZoom(slider) {
-            precisionHelperZoom = parseFloat(slider.value);
-            precisionHelperZoomSlider.parentNode.querySelector("b").innerHTML = precisionHelperZoom + "×";
-            window.localStorage.setItem("precision-helper-zoom", precisionHelperZoom);
+            settings.precisionHelperZoom = parseFloat(slider.value);
+            precisionHelperZoomSlider.parentNode.querySelector("b").innerHTML = settings.precisionHelperZoom + "×";
+            writeSettingsToLocalStorage();
             renderPrecisionHelper();
         }
 
         function updateDownloadImmediately(checkbox) {
-            downloadImmediately = !!checkbox.checked;
-            window.localStorage.setItem("download-immediately", !!checkbox.checked ? "yes" : "no");
+            settings.downloadImmediately = !!checkbox.checked;
+            writeSettingsToLocalStorage();
         }
 
         function updateFilenameTemplate(field) {
-            filenameTemplate = field.value;
-            window.localStorage.setItem("filename-template", filenameTemplate);
+            settings.filenameTemplate = field.value;
+            writeSettingsToLocalStorage();
         }
 
         function updateTransparentBackground(checkbox) {
-            transparentBackground = !!checkbox.checked;
-            window.localStorage.setItem("transparent-background", !!checkbox.checked ? "yes" : "no");
-            if (transparentBackground) {
+            settings.transparentBackground = !!checkbox.checked;
+            writeSettingsToLocalStorage();
+            if (settings.transparentBackground) {
                 marginSettings.classList.add("disabled");
                 verticalMarginSlider.disabled = true;
                 horizontalMarginSlider.disabled = true;
@@ -1566,35 +1700,17 @@
         }
 
         function adjustVerticalMargin(slider) {
-            verticalMargin = parseFloat(slider.value);
-            verticalMarginSlider.parentNode.querySelector("b").innerHTML = verticalMargin + "·<em>r</em>";
-            window.localStorage.setItem("vertical-margin", verticalMargin);
+            settings.verticalMargin = parseFloat(slider.value);
+            verticalMarginSlider.parentNode.querySelector("b").innerHTML = settings.verticalMargin + "·<em>r</em>";
+            writeSettingsToLocalStorage();
             renderWork();
         }
 
         function adjustHorizontalMargin(slider) {
-            horizontalMargin = parseFloat(slider.value);
-            horizontalMarginSlider.parentNode.querySelector("b").innerHTML = horizontalMargin + "·<em>r</em>";
-            window.localStorage.setItem("horizontal-margin", horizontalMargin);
+            settings.horizontalMargin = parseFloat(slider.value);
+            horizontalMarginSlider.parentNode.querySelector("b").innerHTML = settings.horizontalMargin + "·<em>r</em>";
+            writeSettingsToLocalStorage();
             renderWork();
-        }
-
-        function resetSettings() {
-            showOldSelectionsCheckbox.checked = showOldSelectionsCheckbox.getAttribute("data-default");
-            updateShowOldSelections(showOldSelectionsCheckbox);
-            precisionHelperZoomSlider.value = precisionHelperZoomSlider.getAttribute("data-default");
-            adjustPrecisionHelperZoom(precisionHelperZoomSlider);
-            downloadImmediatelyCheckbox.checked = downloadImmediatelyCheckbox.getAttribute("data-default");
-            updateDownloadImmediately(downloadImmediatelyCheckbox);
-            filenameTemplateField.value = filenameTemplateField.getAttribute("data-default");
-            updateFilenameTemplate(filenameTemplateField);
-
-            transparentBackgroundCheckbox.checked = transparentBackgroundCheckbox.getAttribute("data-default");
-            updateTransparentBackground(transparentBackgroundCheckbox);
-            verticalMarginSlider.value = verticalMarginSlider.getAttribute("data-default");
-            adjustVerticalMargin(verticalMarginSlider);
-            horizontalMarginSlider.value = horizontalMarginSlider.getAttribute("data-default");
-            adjustHorizontalMargin(horizontalMarginSlider);
         }
 
 
@@ -1649,7 +1765,7 @@
         setupPrecisionHelper();
         setupWork();
 
-        setupConfig();
+        setupSettings();
     </script>
 </body>
 </html>
