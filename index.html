@@ -350,6 +350,15 @@
             color: var(--input-danger-color);
         }
 
+
+        .circles-cache-io button,
+        .settings-io button {
+            display: inline-block;
+            width: auto;
+            font-size: 0.8em;
+            border-radius: 0;
+        }
+
         /* TODO clean up position absolute and fixed */
 
         /* GITHUB CORNER */
@@ -469,13 +478,22 @@
 
         <hr>
 
-        TODO local storage: download, restore (will be union'd with existing circles), red: clear
-
-        <p><span><em>These settings are continually written to local storage and will be restored when you close and reopen this page.</em></span></p>
+        <p><span><em>These settings, along with your selections, are continually written to local storage and will be restored when you close and reopen this page.</em></span></p>
         <p><span>Nevertheless, TODO write + make these work! also, make them half-width, just cause cool.</span></p>
-        <button onclick="downloadSVG();">download settings</button>
-        <button onclick="downloadSVG();">restore settings...</button>
-        <a class="reset" href="javascript:resetSettings();">reset settings</a>
+
+        TODO local storage: download, restore (will be union'd with existing circles), red: clear
+        ``
+        <section class="circles-cache-io">
+            <button onclick="downloadSVG();">backup</button>
+            <button onclick="downloadSVG();">restore...</button>
+            <button onclick="downloadSVG();">wipe</button>
+        </section>
+
+        <section class="settings-io">
+            <button onclick="downloadSVG();">backup</button>
+            <button onclick="downloadSVG();">restore...</button>
+            <button onclick="downloadSVG();">reset</button>
+        </section>
     </aside>
     <aside class="precision-helper">
         <canvas id="prec"></canvas>
@@ -570,8 +588,7 @@
 
         let circles = [];
 
-        let geoCircleCache = []; // TODO use
-        let imageCircleCache = []; // TODO use
+        let locallyStoredCircles = []; // TODO use
 
 
         /////////////
@@ -759,11 +776,6 @@
             return {lat: lat, lon: lon};
         }
 
-        // TODO use this for output filename
-        function getCenterLatLon() {
-            return getLatLon(image.width / 2, image.height / 2);
-        }
-
         // TODO: this is the length of n (image space pixels) in meters at lat,lon
         // TODO refine this. share radians function, remove (also in other places) dependency on .dropped-image (store image size in js)
         function getMeters(lat, lon, n) {
@@ -792,8 +804,8 @@
 
             if (currentCircle) {
                 let image = document.getElementById("dropped-image");
-                let x = currentCircle.startX;
-                let y = currentCircle.startY;
+                let x = currentCircle.x;
+                let y = currentCircle.y;
                 let r = currentCircle.r;
 
                 // TODO make this prettier, maybe it's possible to do all 9 cases in a general function like this?
@@ -959,9 +971,9 @@
 
                 wc.beginPath();
                 wc.setLineDash([logicalCanvastoPhysicalCanvas(6), logicalCanvastoPhysicalCanvas(4)]);
-                wc.arc(imageToPhysicalCanvas(currentCircle.startX), imageToPhysicalCanvas(currentCircle.startY), imageToPhysicalCanvas(currentCircle.r), 0, 2 * Math.PI);
-                wc.moveTo(imageToPhysicalCanvas(currentCircle.startX), imageToPhysicalCanvas(currentCircle.startY));
-                wc.lineTo(imageToPhysicalCanvas(currentCircle.x), imageToPhysicalCanvas(currentCircle.y));
+                wc.arc(imageToPhysicalCanvas(currentCircle.x), imageToPhysicalCanvas(currentCircle.y), imageToPhysicalCanvas(currentCircle.r), 0, 2 * Math.PI);
+                wc.moveTo(imageToPhysicalCanvas(currentCircle.x), imageToPhysicalCanvas(currentCircle.y));
+                wc.lineTo(imageToPhysicalCanvas(currentCircle.px), imageToPhysicalCanvas(currentCircle.py));
                 wc.lineWidth = logicalCanvastoPhysicalCanvas(1);
                 wc.stroke();
                 wc.setLineDash([]);
@@ -970,8 +982,8 @@
                     wc.beginPath();
                     wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
                     wc.rect(
-                        imageToPhysicalCanvas(currentCircle.startX - (horizontalMargin + 1) * currentCircle.r),
-                        imageToPhysicalCanvas(currentCircle.startY - (verticalMargin + 1) * currentCircle.r),
+                        imageToPhysicalCanvas(currentCircle.x - (horizontalMargin + 1) * currentCircle.r),
+                        imageToPhysicalCanvas(currentCircle.y - (verticalMargin + 1) * currentCircle.r),
                         imageToPhysicalCanvas((2 * horizontalMargin + 2) * currentCircle.r),
                         imageToPhysicalCanvas((2 * verticalMargin + 2) * currentCircle.r)
                         );
@@ -1032,31 +1044,33 @@
 
         document.getElementById("work").addEventListener('mousedown', event => {
 
-            // only react when a normal click was performed
+            // only react if a normal click was performed
             if (event.button != 0) {
                 return;
             }
 
             currentlySelectingCircle = true;
             currentCircle = {
-                startX: logicalCanvasToImage(event.pageX),  // - left offset of #work wrt viewport if top left corner of canvas were not at (0,0)
-                startY: logicalCanvasToImage(event.pageY),  // analogous
-                x: logicalCanvasToImage(event.pageX),
-                y: logicalCanvasToImage(event.pageY),
+                x: logicalCanvasToImage(event.pageX),  // - left offset of #work wrt viewport if top left corner of canvas were not at (0,0)
+                y: logicalCanvasToImage(event.pageY),  // analogous
+                px: logicalCanvasToImage(event.pageX),
+                py: logicalCanvasToImage(event.pageY),
                 r: 0
             };
+            renderWork();
+            renderPrecisionHelper();
         });
         document.getElementById("work").addEventListener('mousemove', event => {
             if (currentlySelectingCircle) {
-                let x = logicalCanvasToImage(event.pageX);  // see caveat above
-                let y = logicalCanvasToImage(event.pageY);  // analogous
+                let px = logicalCanvasToImage(event.pageX);  // see caveat above
+                let py = logicalCanvasToImage(event.pageY);  // analogous
 
-                let dy = Math.abs(y - currentCircle.startY);
-                let dx = Math.abs(x - currentCircle.startX);
+                let dx = Math.abs(px - currentCircle.x);
+                let dy = Math.abs(py - currentCircle.y);
                 let r = Math.sqrt(dx ** 2 + dy ** 2);
 
-                currentCircle.x = x;
-                currentCircle.y = y;
+                currentCircle.px = px;
+                currentCircle.py = py;
                 currentCircle.r = r;
                 renderWork();
                 renderPrecisionHelper();
@@ -1064,7 +1078,7 @@
         });
         document.getElementById("work").addEventListener('mouseup', event => {
 
-            // only react when a normal click was performed
+            // only react if a normal click was performed
             if (event.button != 0) {
                 return;
             }
@@ -1078,20 +1092,20 @@
 
                 cloneMostRecentSelectionAt(x, y);
             }
+            renderWork();
+            renderPrecisionHelper();
         });
 
         // TODO move this function to a better place
         function cloneMostRecentSelectionAt(x, y) {
             let previousCircle = circles[circles.length-1];
             currentCircle = {
-                startX: x,
-                startY: y,
-                x: x + previousCircle.r / Math.sqrt(2),
-                y: y - previousCircle.r / Math.sqrt(2),
+                x: x,
+                y: y,
+                px: (previousCircle.px - previousCircle.x) + x,
+                py: (previousCircle.py - previousCircle.y) + y,
                 r: previousCircle.r
             };
-            renderWork();
-            renderPrecisionHelper();
         }
 
 
@@ -1112,12 +1126,10 @@
             let lat = "";
             let lon = "";
             let rm = "";
-            if (geoRect) {
-                let latlon = getLatLon(circle.x, circle.y);
-                let m = getMeters(latlon.lat, latlon.lon, circle.r);
-                lat = `<span>${(latlon.lat + "").toString().substring(0,8)}°</span>`;
-                lon = `<span>${(latlon.lon + "").substring(0,8)}°</span>`;
-                rm = `<span>${parseInt(m)}m</span>`;
+            if (circle.lat) {
+                lat = `<span>${(circle.lat + "").toString().substring(0,8)}°</span>`;
+                lon = `<span>${(circle.lon + "").substring(0,8)}°</span>`;
+                rm = `<span>${parseInt(circle.rm)}m</span>`;
             }
 
             let cells = `
@@ -1162,10 +1174,6 @@
         function assembleFilename(id) {
             let circle = getCircle(id);
 
-            let x = circle.x;
-            let y = circle.y;
-            let r = circle.r;
-
             // super basic string variable replacement, via https://stackoverflow.com/a/1408373
             let supplant = (s, o) => {
                 return s.replace(/{([^{}]*)}/g,
@@ -1177,18 +1185,16 @@
             };
 
             let filenameVariables = {
-                x: parseInt(x),
-                y: parseInt(y),
-                r: parseInt(r)
+                x: parseInt(circle.x),
+                y: parseInt(circle.y),
+                r: parseInt(circle.r)
             }
 
-            if (geoRect) {
-                let latlon = getLatLon(x, y);
-                let rm = getMeters(latlon.lat, latlon.lon, circle.r);
+            if (circle.lat) {
                 filenameVariables = Object.assign(filenameVariables, {
-                    lat: latlon.lat,
-                    lon: latlon.lon,
-                    rm: rm
+                    lat: circle.lat,
+                    lon: circle.lon,
+                    rm: circle.rm
                 });
             }
 
@@ -1275,10 +1281,27 @@
 
             let circle = {
                 id: Date.now(),
-                x: currentCircle.startX,
-                y: currentCircle.startY,
+                x: currentCircle.x,
+                y: currentCircle.y,
+                px: currentCircle.px,
+                py: currentCircle.py,
                 r: currentCircle.r
             };
+
+            if (geoRect) {
+                let latlon = getLatLon(currentCircle.x, currentCircle.y);
+                let rm = getMeters(latlon.lat, latlon.lon, currentCircle.r);
+                circle = Object.assign(circle, {
+                    lat: latlon.lat,
+                    lon: latlon.lon,
+                    rm: rm
+                });
+            }
+
+            // -----------------------------------------------------------------
+            // TODO add file "hash" here, then just loop thru all circles in local storage on image load and filter out the ones that match the file or, if set, georect? put geo ones into a separate section of the table (or separate table) and draw them differently, with possiblilty to promote them into image (checkmark/delete button, where the delete button just removes them from consideration but leaves them in storage)? and accept/delete all?
+            // -----------------------------------------------------------------
+
             circles.push(circle);
             currentCircle = null;
 
@@ -1307,8 +1330,8 @@
 
             // this took some figuring out!
             let f = currentCircle.r / (currentCircle.r - s);
-            currentCircle.x = currentCircle.startX + (currentCircle.x - currentCircle.startX) * f;
-            currentCircle.y = currentCircle.startY + (currentCircle.y - currentCircle.startY) * f;
+            currentCircle.px = currentCircle.x + (currentCircle.px - currentCircle.x) * f;
+            currentCircle.py = currentCircle.y + (currentCircle.py - currentCircle.y) * f;
 
             renderWork();
             renderPrecisionHelper();
@@ -1325,10 +1348,10 @@
                 cloneMostRecentSelectionAt(x0, y0);
             }
 
-            currentCircle.startX += x;
-            currentCircle.startY += y;
             currentCircle.x += x;
             currentCircle.y += y;
+            currentCircle.px += x;
+            currentCircle.py += y;
 
             renderWork();
             renderPrecisionHelper();
