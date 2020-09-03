@@ -415,9 +415,11 @@
                     <td>radius</td>
                     <td></td>
                 </thead>
-                <tbody id="circles-table-body">
-                </tbody>
+                <tbody id="circles-table-body"></tbody>
             </table>
+
+            <button onclick="cropAndDownloadAll();">download all as zip</button>
+            <span>The ZIP will also include a copy of the original image (TODO will this have the same number of bytes as the originally uploaded one? important for reupload of selection json), as well as a JSON file describing the selections TODO that you can import with the buttons at the bottom of this config sidebar. TODO and another json file for the options. anyway, TODO implement.</span>
         </section>
 
         <hr>
@@ -460,9 +462,14 @@
                 horizontal margin
             </label>
             <span>Analogous to the vertical margin, but towards the left and right.</span>
+
+            TODO this will yield a TODO:TODO aspect ratio.
+            TODO change to height, width in ters of r, perhaps with a minimum of 2.0?
         </section>
 
         <hr>
+
+        TODO local storage: download, restore (will be union'd with existing circles), red: clear
 
         <p><span><em>These settings are continually written to local storage and will be restored when you close and reopen this page.</em></span></p>
         <p><span>Nevertheless, TODO write + make these work! also, make them half-width, just cause cool.</span></p>
@@ -519,6 +526,7 @@
 
         <h2>Privacy Policy</h2>
         <p>There isn't any server communication beyond the initial page load, so you should be safe. No analytics or trackers either. This tool is hosted on GitHub Pages, so I don't even have access to web server logs (but presumably, GitHub does).</p>
+        TODO note on local storage use: other pages served from the same domain can access it. this includes if you're running this via a file:// url.
         <p>But, in the words of the inimitable LeVar Burton, <em>you don't have to take my word for it</em>: Just download this tool (TODO link), disconnect your device from the internet, open the tool in an incognito window, do your work, close the window, delete your local copy of the tool, then enable wifi again.</p>
 
         <h2>Credit</h2>
@@ -532,13 +540,17 @@
 
     <script>
         // TODO now, implement:
+        // * in preparation: rename startx, starty to x,y and x,y in currentcircle to px, py? also store latlon in circle object.
         // * keep hash of image, along with circles, in local storage. provide means of backing local storage up (button!) and restoring it (mini drag area in sidebar? or just file selection button. or both!). (also wiping, i guess). => then, if user drags in a previously-dragged image, the previously-marked circles will show up
-        // * => things to base hash on: filename, width, height, size
+        // * => things to base "hash" on: btoa(filename + width + height + size), somehow limit length?
         // * => also local storage backup and restore etc., plus settings-only export and import
+        // * => convoluted notes: okay. get circles from hashed index in local storage atfirst. populate circles var, then call a to-write function that populates the table. then, if georect, check latlon cache for latlon circles. add any (to circles and list) whose id is not already in circles? need to keep latlon in circles list (or at least in latlon cache). then update local storage with newly assembled list? maybe have options for keeping circles in localstorage, separate for image-based and latlon-based? with “clear all circles from local storage” option, and the already-implemented-in-html ls download and ls upload (hmm, what to do when circles have already been marked manually upon upload? just replace (with warning) since this will also delete old circles for other images in local storage? or try to merge, since if the user wants a replacement, they could just delete all circles before import?) and settings reset functions?
         // * make main drag area also pop up a file selector when clicked: https://stackoverflow.com/a/28075416
-        // * make file download async so it wouldn't block?
-        // * fix status messages: make async like umml compile status
+        // * make file setup and download async so it wouldn't block?
+        // * => use a worker? https://stackoverflow.com/a/42800542
+        // * fix status messages: make async like umml compile status?
         // * TODO maybe "download all" (zip?, perhaps with a json file allowing re-import, plus the original image for good measure?) and "delete all" buttons at the bottom of the table
+        // * finish user's guide, link to it from various settings, etc. take screenshots & record bits of video?
 
         /////////////
         // GLOBALS //
@@ -557,6 +569,9 @@
         let highlightedCircleId = null;
 
         let circles = [];
+
+        let geoCircleCache = []; // TODO use
+        let imageCircleCache = []; // TODO use
 
 
         /////////////
@@ -641,6 +656,7 @@
                 let filename = files[0].name;
                 extractAndSetGeoRect(filename);
                 console.log(files[0]);
+                console.log(btoa(files[0].name + files[0].size));
 
                 let reader = new FileReader();
                 reader.onload = e => {
