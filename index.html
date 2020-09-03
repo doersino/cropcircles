@@ -513,12 +513,12 @@
         </section>
         <p><span>The same goes for your <em>selections</em>, both your current ones and ones you've made in previous sessions. This allows you to close this tool mid-work, reopen it, drag the same image in again, and continue selecting from where you left off – or a different image <a>covering an area</a> you've previously made selections in. Again, your browser might decide to evict this data from its cache, hence:</span></p>
         <section class="backup-restore">
-            <button onclick="downloadSelection();">
+            <button onclick="downloadSelectionCache();">
                 <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path></svg>
                 back up
             </button>
-            <input id="upload-circle-cache" type="file" accept="application/json" style="display: none;">
-            <button onclick="downloadSVG();">
+            <input id="upload-selectioncache" type="file" accept="application/json" style="display: none;">
+            <button onclick="restoreSelectionCache();">
                 <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M0,10 L0,-10 M-10,0 L0,-10 L10,0"></path></svg>
                 restore…
             </button>
@@ -624,7 +624,15 @@
 
         let circles = [];
 
-        let locallyStoredCircles = []; // TODO use
+        let selectionCache = [];
+
+        let imageInfo = {
+            name: null,
+            size: null,
+            width: null,
+            height: null,
+            fileid: null
+        };
 
 
         /////////////
@@ -713,10 +721,12 @@
 
                 // TODO deduplicate this with button-press-way of adding a file
                 let file = files[0];
-
                 let filename = file.name;
+
+                imageInfo.name = file.name;
+                imageInfo.size = file.size;
+
                 extractAndSetGeoRect(filename);
-                console.log(btoa(file.name + file.size));
 
                 let reader = new FileReader();
                 reader.onload = e => {
@@ -738,10 +748,12 @@
             let files = document.getElementById("upload-image").files;
             if (files.length == 1) {
                 let file = files[0];
-
                 let filename = file.name;
+
+                imageInfo.name = file.name;
+                imageInfo.size = file.size;
+
                 extractAndSetGeoRect(filename);
-                console.log(btoa(file.name + file.size));
 
                 let reader = new FileReader();
                 reader.onload = e => {
@@ -758,6 +770,10 @@
             e.preventDefault();
             setStatus("Setting up sample image…", true);
             let filename = "sample-sw42.286577541476696,-113.90409924217032ne42.340476458523305,-113.80691475782969.jpg";
+
+            imageInfo.name = filename;
+            imageInfo.size = 7383532;
+
             extractAndSetGeoRect(filename);
             setImage(filename);
             clearStatus();
@@ -773,8 +789,13 @@
             document.getElementById("dropped-image").setAttribute("src", src);
         }
 
+        // TODO rename, since it's not just "dropped" anymore
         function drawDroppedImage() {
             let image = document.getElementById("dropped-image");
+
+            imageInfo.width = image.width;
+            imageInfo.height = image.height;
+            imageInfo.fileid = btoa(imageInfo.name + imageInfo.size + imageInfo.width + imageInfo.height);
 
             let scaleX = work.width / image.width;
             let scaleY = work.height / image.height;
@@ -783,6 +804,9 @@
             document.getElementById("base-image").setAttribute("src", image.src);
             document.getElementById("base-image").setAttribute("width", imageToLogicalCanvas(image.width))
             document.getElementById("base-image").setAttribute("height", imageToLogicalCanvas(image.height));
+
+            extractRelevantSelectionsFromSelectionCache();
+            renderWork();
         }
 
         ///////////////////
@@ -1026,6 +1050,7 @@
             let wc = work.getContext("2d");
 
             wc.clearRect(0, 0, work.width, work.height);
+            wc.lineWidth = logicalCanvastoPhysicalCanvas(1);
 
             if (currentCircle) {
                 wc.strokeStyle = readCssVar("current-selection-stroke");
@@ -1035,7 +1060,6 @@
                 wc.arc(imageToPhysicalCanvas(currentCircle.x), imageToPhysicalCanvas(currentCircle.y), imageToPhysicalCanvas(currentCircle.r), 0, 2 * Math.PI);
                 wc.moveTo(imageToPhysicalCanvas(currentCircle.x), imageToPhysicalCanvas(currentCircle.y));
                 wc.lineTo(imageToPhysicalCanvas(currentCircle.px), imageToPhysicalCanvas(currentCircle.py));
-                wc.lineWidth = logicalCanvastoPhysicalCanvas(1);
                 wc.stroke();
                 wc.setLineDash([]);
 
@@ -1223,6 +1247,7 @@
 
         function deleteCircle(id) {
             circles = circles.filter(c => c.id != id);
+            removeFromSelectionCache(id);
             document.getElementById(id).remove();
             renderWork();
         }
@@ -1338,10 +1363,12 @@
         //////////////////////////
 
         function acceptCurrentCircle() {
+            // TODO move/change this status
             setStatus("Cropping image…", true);
 
             let circle = {
                 id: Date.now(),
+                fileid: imageInfo.fileid,
                 x: currentCircle.x,
                 y: currentCircle.y,
                 px: currentCircle.px,
@@ -1367,6 +1394,7 @@
             currentCircle = null;
 
             addToTable(circle.id);
+            addToSelectionCache(circle);
             if (settings.downloadImmediately) {
                 cropAndDownload(circle.id);
             }
@@ -1559,6 +1587,9 @@
         function initSettingsFromLocalStorage() {
             let s = window.localStorage.getItem("cropcircles-settings");
             try {
+                if (s == null) {
+                    throw '';
+                }
                 settings = JSON.parse(s);
             } catch (e) {
                 resetSettingsToDefaults();
@@ -1595,9 +1626,7 @@
                 reader.onload = e => {
                     try {
                         let s = e.target.result;
-                        console.log(settings);
                         settings = JSON.parse(s);
-                        console.log(settings);
                         applySettingsView();
                         setStatus("Successfully restored settings from \"" + filename + "\".")
 
@@ -1714,6 +1743,132 @@
         }
 
 
+        /////////////////////
+        // SELECTION CACHE //
+        /////////////////////
+
+        function initSelectionCacheFromLocalStorage() {
+            let s = window.localStorage.getItem("cropcircles-selectioncache");
+            try {
+                if (s == null) {
+                    throw '';
+                }
+                selectionCache = JSON.parse(s);
+            } catch (e) {
+                purgeSelectionCache();
+            }
+        }
+
+        function setupSelectionCache() {
+            initSelectionCacheFromLocalStorage();
+        }
+
+        // TODO dedup this with the same for settings
+        function downloadSelectionCache() {
+            let url = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectionCache));
+            let dummyLink = document.createElement("a");
+            dummyLink.setAttribute("href", url);
+            dummyLink.setAttribute("download", "cropcircles-selectioncache.json");
+            dummyLink.style.display = "none";
+            document.body.appendChild(dummyLink);
+            dummyLink.click();
+            document.body.removeChild(dummyLink);
+        }
+
+        // TODO dedup this with the same for settings
+        function restoreSelectionCache() {
+            document.getElementById("upload-selectioncache").click();
+        }
+
+        // TODO dedup this with the same for settings, by writing a function taking a callback that will be set as reader.onload (why not addeventlistener, btw?)
+        document.getElementById("upload-selectioncache").addEventListener('change', e => {
+            let files = document.getElementById("upload-selectioncache").files;   // TODO e.target? generally, standardize "event" or "e"
+            if (files.length == 1) {
+                let file = files[0];
+
+                let filename = file.name;
+
+                let reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        let s = e.target.result;
+                        tmpSelectionCache = JSON.parse(s);
+
+                        // merge with current selection cache: only add those that are not already in the selection cache
+                        tmpSelectionCache = tmpSelectionCache.filter(c => {
+                            return null == selectionCache.find(cc => cc.id == c.id)
+                        });
+                        console.log(tmpSelectionCache);
+
+                        selectionCache = tmpSelectionCache;
+                        extractRelevantSelectionsFromSelectionCache();
+
+                        setStatus("Successfully restored selection cache from \"" + filename + "\".")
+
+                        // forget about the file, allowing the event handler to fire again if the user uploads the same file again
+                        document.getElementById("upload-selectioncache").value = "";
+                    } catch (e) {
+                        // TODO show error message
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                // TODO error if more than 1 file? in general, a way of presenting errors nicely?
+            }
+        });
+
+        function extractRelevantSelectionsFromSelectionCache() {
+
+            // TODO rename
+            let newCircles = selectionCache.filter(c => {
+
+                // if already in list of current selections, no need to add it
+                if (getCircle(c.id)) {
+                    return false;
+                }
+
+                if (c.fileid == imageInfo.fileid) {
+                    return true;
+                }
+
+                if (geoRect && c.lat) {
+                    if (geoRect.sw.lat <= c.lat && c.lat <= geoRect.ne.lat && geoRect.sw.lon <= c.lon && c.lon <= geoRect.ne.lon) {
+                        return true;
+                    }
+                    // TODO in this case the x and y and r (and px, py) need to be reconstructed based on lat, lon and georect! => change in selection cache, or just keep as "stranger"?
+                    // also, should the fileid field really be a list? since a selection can be from one image, but then be accepted based on geodata into another image. then again, on a reload it would then just reappear based on geodata?
+                    // perhaps no fileid is even needed if geodata is available? but that's weird too, and would require stepping into this bit of code here, instead of shortcircuiting on the fileid equality check above
+                    // => of just divide into geo-based one (sans x, y, r, fileid, px, py, but with latlon'd px, py) and file-based one, with file-based one taking precedence if both exist?
+                }
+            });
+
+            newCircles.forEach(c => {
+                circles.push(c);
+                addToTable(c.id)
+            });
+        }
+
+        function addToSelectionCache(circle) {
+            selectionCache.push(circle);
+            writeSelectionCacheToLocalStorage();
+        }
+
+        function removeFromSelectionCache(id) {
+            selectionCache = selectionCache.filter(c => c.id != id);
+            writeSelectionCacheToLocalStorage();
+        }
+
+        function writeSelectionCacheToLocalStorage() {
+            window.localStorage.setItem("cropcircles-selectioncache", JSON.stringify(selectionCache));
+        }
+
+        // reset to only include the current circles
+        function purgeSelectionCache() {
+            selectionCache = circles;
+            writeSelectionCacheToLocalStorage();
+        }
+
+
         //////////////////
         // USER'S GUIDE //
         //////////////////
@@ -1766,6 +1921,7 @@
         setupWork();
 
         setupSettings();
+        setupSelectionCache();
     </script>
 </body>
 </html>
