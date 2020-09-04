@@ -198,6 +198,26 @@
             color: var(--text-color);
         }
 
+        /* 'NOTHER IMAGE DROPPER */
+        .another-image-dropper {
+            margin: 1rem 0;
+            border: 0.15rem dashed var(--dropper-color);
+            border-radius: 1em;
+            color: var(--dropper-color);
+            font-size: 1.4em;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 500;
+            letter-spacing: -0.05em;
+        }
+        .another-image-dropper.active {
+            background-color: inherit;
+            filter: invert(1);
+        }
+        .another-image-dropper.hidden {
+            display: none;
+        }
+
         /* USER'S GUIDE */
         .users-guide {
             position: fixed;
@@ -443,6 +463,12 @@
         <p>A tool for cropping circular <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery.</p>
         <span><strong>Usage:</strong> Provide an image, click and drag from a center point to make a selection, refine it with <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>+</kbd> <kbd>-</kbd>, then press <kbd>enter</kbd> to download the cropped result. <a href="javascript:showUsersGuide();">Learn more…</a></span>
 
+        <div class="another-image-dropper">
+            <input id="upload-another-image" type="file" accept="image/*" style="display: none;">
+            Drop or <a>select</a> another image…
+        </div>
+        TODO implement this
+
         <section class="circles-table-container hidden">
             <hr>
 
@@ -501,9 +527,11 @@
                 horizontal margin
             </label>
             <span>Analogous to the vertical margin, but towards the left and right.</span>
-
-            TODO this will yield a TODO:TODO aspect ratio.
-            TODO change to height, width in ters of r, perhaps with a minimum of 2.0?
+            <label>
+                <b class="aspect-ratio">1:1</b>
+                aspect ratio
+            </label>
+            <span>Your settings result in the aspect ratio shown above.</span>
         </section>
 
         <hr>
@@ -1427,7 +1455,7 @@
 
             // pieced together from jszip docs and fiddling around, genuinely no clue how it works or if it could be done better
             let filename = "cropcircles-" + imageInfo.name.replace(/\./g, "-") + ".zip";
-            setStatus("Generating ZIP…", true);
+            setStatus("Generating ZIP – this might take a bit as there's " + circles.length + " crops to be performed…", true);
 
             let zip = new JSZip();
 
@@ -1467,7 +1495,11 @@
         //////////////////////////
 
         function acceptCurrentCircle() {
-            // TODO move/change this status
+            if (!currentCircle) {
+                return;
+            }
+
+            // TODO move/change this status, only show if actuall cropping
             setStatus("Cropping image…", true);
 
             let circle = {
@@ -1821,9 +1853,29 @@
             renderWork();
         }
 
+        function computeAspectRatio() {
+            let w = (2 * (settings.horizontalMargin + 1));
+            let h = (2 * (settings.verticalMargin + 1));
+            let aspectRatio = w / h;
+
+            // some common values, could do this more nicely with a gcd algorithms, but meh
+            if (aspectRatio == 16 / 9) {
+                return "16:9";
+            } else if (aspectRatio == 4 / 3) {
+                return "4:3";
+            } else if (aspectRatio == 3 / 2) {
+                return "3:2";
+            } else if (aspectRatio == 2 / 1) {
+                return "2:1";
+            }
+
+            return (aspectRatio + "").substring(0, 4) + ":" + 1;
+        }
+
         function adjustVerticalMargin(slider) {
             settings.verticalMargin = parseFloat(slider.value);
             verticalMarginSlider.parentNode.querySelector("b").innerHTML = settings.verticalMargin + "·<em>r</em>";
+            document.querySelector(".aspect-ratio").innerText = computeAspectRatio();
             writeSettingsToLocalStorage();
             renderWork();
         }
@@ -1831,6 +1883,7 @@
         function adjustHorizontalMargin(slider) {
             settings.horizontalMargin = parseFloat(slider.value);
             horizontalMarginSlider.parentNode.querySelector("b").innerHTML = settings.horizontalMargin + "·<em>r</em>";
+            document.querySelector(".aspect-ratio").innerText = computeAspectRatio();
             writeSettingsToLocalStorage();
             renderWork();
         }
