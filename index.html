@@ -67,6 +67,28 @@
             color: var(--text-color);
         }
 
+        p {
+            margin: 1em 0;
+        }
+        a {
+            color: var(--link-color);
+            text-decoration: underline;
+        }
+        a:hover {
+            color: var(--hover-color);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid var(--rule-color);
+            margin: 1rem 0;
+        }
+        kbd {
+            font: inherit;
+            background-color: var(--kbd-background-color);
+            padding: 0 0.2rem;
+            border-radius: 0.2rem
+        }
+
         /* SIDEBAR */
         .sidebar {
             width: var(--sidebar-width);
@@ -90,26 +112,9 @@
             height: 0.75em;
             margin: 0 -0.05em 0 0.05em;
         }
-        p {
-            margin: 1em 0;
-        }
-        a {
-            color: var(--link-color);
-            text-decoration: underline;
-        }
-        a:hover {
-            color: var(--hover-color);
-        }
-        hr {
-            border: none;
-            border-top: 1px solid var(--rule-color);
-            margin: 1rem 0;
-        }
-        kbd {
-            font: inherit;
-            background-color: var(--kbd-background-color);
-            padding: 0 0.2rem;
-            border-radius: 0.2rem
+        span {
+            font-size: 0.85em;
+            display: block;
         }
         button, label, input[type="text"] {
             font: inherit;
@@ -164,10 +169,6 @@
             text-transform: initial;
             color: var(--input-current-value-color);
         }
-        span {
-            font-size: 0.85em;
-            display: block;
-        }
         .disabled {
             opacity: 0.5;
             pointer-events: none;
@@ -200,7 +201,7 @@
             color: var(--text-color);
         }
 
-        /* 'NOTHER IMAGE DROPPER */
+        /* ANOTHER IMAGE DROPPER */
         .another-image-dropper {
             margin: 1rem 0;
             border: 0.15rem dashed var(--dropper-color);
@@ -220,147 +221,6 @@
             display: none;
         }
 
-        /* USER'S GUIDE */
-        .users-guide {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 90vh;
-            overflow: scroll;
-            width: 40em;
-            margin: 5vh 0 0 5vh;
-            padding: 1em 4em 2em 2em;
-            z-index: 10;
-            background-color: var(--users-guide-background-color);
-            box-shadow: 0.5em 0.5em 4em var(--users-guide-background-color);
-            display: none;
-        }
-        .users-guide .hide {
-            display: block;
-            text-decoration: none;
-            font-size: 3em;
-            position: fixed;
-            margin: -1rem 0 0 35rem;
-            font-weight: 200;
-        }
-        h2 {
-            font-weight: 300;
-            text-transform: uppercase;
-            font-size: 1.5em;
-            margin-top: 1.5em;
-        }
-
-        /* STATUS */
-        .status {
-            position: fixed;
-            left: 0;
-            bottom: 0;
-            background-color: var(--status-background-color);
-            padding: 0.5em;
-            pointer-events: none;
-            z-index: 10;
-            opacity: 1;
-        }
-        .status.hidden {
-            opacity: 0;
-            transition: opacity 0.5s ease-out;
-        }
-
-        /* ERROR */
-        .error {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            padding: 2em 5em 2em 2em;
-            background-color: var(--error-background-color);
-            z-index: 10;
-        }
-        .error-message {
-            margin: 0;
-        }
-        .error .dismiss {
-            display: block;
-            text-decoration: none;
-            font-size: 3em;
-            position: fixed;
-            right: 2rem;
-            margin-top: -1.4rem;
-            font-weight: 200;
-        }
-        .error.hidden {
-            display: none;
-        }
-
-        /* PRECISION HELPER */
-        .precision-helper {
-            position: fixed;
-            width: var(--sidebar-width);
-            height: var(--sidebar-width);
-            bottom: 0;
-            right: 0;
-            background-color: var(--precision-helper-background-color);
-        }
-        .precision-helper canvas {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* CROPPING VIEW */
-        main {
-            width: calc(100vw - var(--sidebar-width));
-            height: 100vh;
-            background-color: var(--main-background-color);
-        }
-        .dropper {
-            padding: 1px; /* fix for margin weirdness */
-            background-color: var(--dropper-background-color);
-            height: 100%;
-            width: calc(100vw - var(--sidebar-width));
-            position: absolute;
-        }
-        .dropper-text {
-            border: 0.35rem dashed var(--dropper-color);
-            border-radius: 1em;
-            color: var(--dropper-color);
-            font-size: 3em;
-            width: 50%;
-            margin: auto;
-            margin-top: 25vh;
-            padding: 4rem 2rem;
-            text-align: center;
-            font-weight: 500;
-            letter-spacing: -0.05em;
-        }
-        .dropper.active .dropper-text {
-            background-color: inherit;
-            filter: invert(1);
-        }
-        .drop-or-select {
-            display: block;
-            font-style: normal;
-            cursor: pointer;
-        }
-        .load-sample {
-            display: block;
-            font-size: 2rem;
-            margin-top: 1em;
-            cursor: pointer;
-        }
-        #dropped-image, #cropped-image {
-            display: none;
-        }
-        #base-image {
-            position: absolute;
-        }
-        #work {
-            position: absolute;
-            display: block;
-            height: 100vh;
-            width: calc(100vw - var(--sidebar-width));
-            cursor: crosshair;
-        }
-
         /* OLD CIRCLES TABLE */
         .circles-table-container.hidden {
             display: none;
@@ -378,8 +238,7 @@
         .circles-table tr:hover {
             background-color: var(--input-background-color);
         }
-        .circles-table .geo-candiate {
-            color: var(--circles-table-geodata-color);
+        .circles-table tfoot span {
             font-style: italic;
         }
         .circles-table td {
@@ -416,7 +275,148 @@
             color: var(--danger-color);
         }
 
-        /* TODO clean up position absolute and fixed */
+        /* USER'S GUIDE */
+        .users-guide {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 90vh;
+            overflow: scroll;
+            width: 40em;
+            margin: 5vh 0 0 5vh;
+            padding: 1em 4em 2em 2em;
+            z-index: 10;
+            background-color: var(--users-guide-background-color);
+            box-shadow: 0.5em 0.5em 4em var(--users-guide-background-color);
+            display: none;
+        }
+        .users-guide .hide {
+            display: block;
+            text-decoration: none;
+            font-size: 3em;
+            position: fixed;
+            margin: -1rem 0 0 35rem;
+            font-weight: 200;
+        }
+        h2 {
+            font-weight: 300;
+            text-transform: uppercase;
+            font-size: 1.5em;
+            margin-top: 1.5em;
+        }
+
+        /* PRECISION HELPER */
+        .precision-helper {
+            position: fixed;
+            width: var(--sidebar-width);
+            height: var(--sidebar-width);
+            bottom: 0;
+            right: 0;
+            background-color: var(--precision-helper-background-color);
+        }
+        .precision-helper canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* STATUS */
+        .status {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            background-color: var(--status-background-color);
+            padding: 0.5em;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 1;
+        }
+        .status.hidden {
+            opacity: 0;
+            transition: opacity 0.5s ease-out;
+        }
+
+        /* ERRORS */
+        .error {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 2em 5em 2em 2em;
+            background-color: var(--error-background-color);
+            z-index: 10;
+        }
+        .error-message {
+            margin: 0;
+        }
+        .error .dismiss {
+            display: block;
+            text-decoration: none;
+            font-size: 3em;
+            position: fixed;
+            right: 2rem;
+            margin-top: -1.4rem;
+            font-weight: 200;
+        }
+        .error.hidden {
+            display: none;
+        }
+
+        /* MAIN CROPPING VIEW */
+        main {
+            width: calc(100vw - var(--sidebar-width));
+            height: 100vh;
+            background-color: var(--main-background-color);
+        }
+        #dropped-image, #cropped-image {
+            display: none;
+        }
+        #base-image {
+            position: absolute;
+        }
+        #work {
+            position: absolute;
+            display: block;
+            height: 100vh;
+            width: calc(100vw - var(--sidebar-width));
+            cursor: crosshair;
+        }
+
+        /* MAIN DROPPER */
+        .dropper {
+            padding: 1px; /* fix for margin weirdness */
+            background-color: var(--dropper-background-color);
+            height: 100%;
+            width: calc(100vw - var(--sidebar-width));
+            position: absolute;
+        }
+        .dropper-text {
+            border: 0.35rem dashed var(--dropper-color);
+            border-radius: 1em;
+            color: var(--dropper-color);
+            font-size: 3em;
+            width: 50%;
+            margin: auto;
+            margin-top: 25vh;
+            padding: 4rem 2rem;
+            text-align: center;
+            font-weight: 500;
+            letter-spacing: -0.05em;
+        }
+        .dropper.active .dropper-text {
+            background-color: inherit;
+            filter: invert(1);
+        }
+        .drop-or-select {
+            display: block;
+            font-style: normal;
+            cursor: pointer;
+        }
+        .load-sample {
+            display: block;
+            font-size: 2rem;
+            margin-top: 1em;
+            cursor: pointer;
+        }
 
         /* GITHUB CORNER */
         @keyframes octocat-wave {
@@ -492,6 +492,7 @@
             </table>
 
             <button onclick="cropAndDownloadAll();">download all as zip</button>
+            TODO set class and attribute .disabled if circles variable is empty
         </section>
 
         <hr>
@@ -645,12 +646,10 @@
     <script src="libs/Stuk-jszip-25d401e/dist/jszip.min.js"></script>
     <script>
         // TODO now, implement:
-        // * "download all as zip" using https://stuk.github.io/jszip/
-        // * make file setup and download async so it wouldn't block?
-        // * => use a worker? https://stackoverflow.com/a/42800542
-        // * fix status messages: make async like umml compile status?
         // * way of switching to another image. drag area at the top of the sidebar, need to adjust scale, geoRect, currentlySelectingCircle, currentCircle, circles, query selectionCache, etc.
         // * finish user's guide, link to it from various settings, etc. take screenshots & record bits of video?
+        // * improve code quality
+        // * clean up position absolute and fixed in css
 
         /////////////
         // GLOBALS //
@@ -1386,8 +1385,6 @@
 
                 let tr = document.createElement("tr");
                 tr.id = circle.id;
-                tr.classList.add("geo-candiate");
-                // TODO fix the following
                 tr.setAttribute("onmouseover", "highlightCircle(" + circle.id + ")");  // would register this with js, but that's almost less elegant than this
                 tr.setAttribute("onmouseout", "highlightCircle(null)");
                 tr.innerHTML = cells;
@@ -1432,6 +1429,8 @@
             circles = [];
             extractRelevantGeoSelectionsFromSelectionCache();
             renderWork();
+
+            setStatus("Successfully deleted all current selections.")
         }
 
 
@@ -1897,7 +1896,6 @@
         }
 
         function resetSettingsToDefaults() {
-            // TODO status message: loaded deafult settings or something
             showOldSelectionsCheckbox.checked = showOldSelectionsCheckbox.getAttribute("data-default") == "yes";
             updateShowOldSelections(showOldSelectionsCheckbox);
             precisionHelperZoomSlider.value = precisionHelperZoomSlider.getAttribute("data-default");
@@ -1913,6 +1911,8 @@
             adjustVerticalMargin(verticalMarginSlider);
             horizontalMarginSlider.value = horizontalMarginSlider.getAttribute("data-default");
             adjustHorizontalMargin(horizontalMarginSlider);
+
+            setStatus("Successfully reset the settings to their default values.")
         }
 
         function updateShowOldSelections(checkbox) {
@@ -2153,7 +2153,12 @@
         function purgeSelectionCache() {
             selectionCache = circles;
             writeSelectionCacheToLocalStorage();
-            // TODO status message
+
+            // hide any now-nonexistant geo selections
+            extractRelevantGeoSelectionsFromSelectionCache();
+            renderWork();
+
+            setStatus("Successfully purged the selection cache – only your current selections remain.")
         }
 
 
