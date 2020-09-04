@@ -207,7 +207,7 @@
         .another-image-dropper {
             margin: 1rem 0;
             border: 0.15rem dashed var(--another-image-dropper-color);
-            border-radius: 1em;
+            border-radius: 0.7em;
             color: var(--another-image-dropper-color);
             background-color: var(--another-image-dropper-background-color);
             font-size: 1.4em;
@@ -239,7 +239,8 @@
             font-size: 0.9em;
             font-weight: 900;
         }
-        .circles-table tr:hover {
+        .circles-table tr:hover,
+        .circles-table tr.hover {
             background-color: var(--input-background-color);
         }
         .circles-table tfoot span {
@@ -317,6 +318,7 @@
             bottom: 0;
             right: 0;
             background-color: var(--precision-helper-background-color);
+            /*box-shadow: 0 0 1em var(--precision-helper-background-color);*/
         }
         .precision-helper canvas {
             width: 100%;
@@ -395,7 +397,7 @@
         }
         .dropper-label {
             border: 0.35rem dashed var(--dropper-color);
-            border-radius: 1em;
+            border-radius: 0.8em;
             color: var(--dropper-color);
             font-size: 3em;
             width: 50%;
@@ -471,13 +473,13 @@
             <em>Circles</em>
         </h1>
         <p>A tool for cropping circular <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery.</p>
-        <span><strong>Usage:</strong> Provide an image, click and drag from a center point to make a selection, refine it with <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>+</kbd> <kbd>-</kbd>, then press <kbd>enter</kbd> to download the cropped result. <a href="javascript:showUsersGuide();">Learn more…</a></span>
 
         <input id="upload-another-image" type="file" accept="image/*" style="display: none;">
-        <div class="another-image-dropper">
+        <div class="another-image-dropper hidden">
             Drop or <a>select</a> another image…
         </div>
-        TODO implement this
+
+        <span><strong>Usage:</strong> Provide an image, click and drag from a center point to make a selection, refine it with <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>+</kbd> <kbd>-</kbd>, then press <kbd>enter</kbd> to download the cropped result. <a href="javascript:showUsersGuide();">Learn more…</a></span>
 
         <section class="circles-table-container hidden">
             <hr>
@@ -496,7 +498,7 @@
             </table>
 
             <button onclick="cropAndDownloadAll();">download all as zip</button>
-            TODO set class and attribute .disabled if circles variable is empty
+            TODO set class and attribute .disabled if circles variable is empty, also show a message within the table
         </section>
 
         <hr>
@@ -650,19 +652,17 @@
     <script src="libs/Stuk-jszip-25d401e/dist/jszip.min.js"></script>
     <script>
         // TODO now, implement:
-        // * way of switching to another image. drag area at the top of the sidebar, need to adjust scale, geoRect, currentlySelectingCircle, currentCircle, circles, query selectionCache, etc.
-        // * finish user's guide, link to it from various settings, etc. take screenshots & record bits of video?
         // * improve code quality
         /*
             i.e.:
-            * stop referring to selections as circles
-            * maybe share the svg files document-wide: https://css-tricks.com/svg-use-with-external-reference-take-2/
-            * abstract a bit, move some functions around into proper sections
             * keep some references to some important elements globally
+            * stop referring to selections as circles
+            * abstract a bit, move some functions around into proper sections
             * generally, use classes and ids more sensibly
             * simplify table rendering code: just rerender each time? would make things easier. also, explicitly order by id (descending)?
         */
         // * clean up position absolute and fixed in css
+        // * finish user's guide, link to it from various settings, etc. take screenshots & record bits of video?
 
         /////////////
         // GLOBALS //
@@ -692,6 +692,9 @@
             height: null,
             fileid: null
         };
+
+
+        let image = document.getElementById("dropped-image");
 
 
         /////////////
@@ -747,8 +750,8 @@
         //////////////////
 
         function setupPrecisionHelper() {
-            let prec = document.getElementById("prec");
-            precisionHelper = setupCanvas(prec);
+            precisionHelper = document.getElementById("prec");
+            setupCanvas(prec);
             renderPrecisionHelper();
         }
 
@@ -861,6 +864,9 @@
 
         function installImage(src) {
 
+            // show the image selector in the side bar upon first image selection
+            document.querySelector(".another-image-dropper").classList.remove("hidden");
+
             // store the image in a hidden img tag
             document.getElementById("dropped-image").addEventListener('load', e => {
                 document.querySelector(".dropper").setAttribute("style", "display: none;");
@@ -882,8 +888,6 @@
         }
 
         function drawNewImage() {
-            let image = document.getElementById("dropped-image");
-
             imageInfo.width = image.width;
             imageInfo.height = image.height;
             imageInfo.fileid = btoa(imageInfo.name + imageInfo.size + imageInfo.width + imageInfo.height);
@@ -905,6 +909,10 @@
 
         // TODO move this section to a better location?
 
+        let radians = x => x * Math.PI / 180;
+        let degrees = x => x * 180 / Math.PI;
+        let earthCircumference = 40075.016686 * 1000;  // in meters, at the equator
+
         function extractAndSetGeoRect(filename) {
 
             // shoutout to https://regexr.com
@@ -924,11 +932,9 @@
             }
         }
 
-        // TODO note: x, y in image space
-        // TODO note: actually correct, even for large areas, taken from aerialbot
-        // TODO split into toLat and toLon?
+        // note: x, y must be in in image space. this function is correct if the imagery follows the web mercator projection, which most online mapping services use (i.e. which aerialbot emits).
+        // TODO getLat, getLon instead?
         function getLatLon(x, y) {
-            let image = document.getElementById("dropped-image");
 
             // invert y (since image y increases from top to bottom, but latitude increases from bottom to top)
             y = image.height - y;
@@ -937,10 +943,7 @@
             x /= image.width;
             y /= image.height;
 
-            let radians = x => x * Math.PI / 180;
-            let degrees = x => x * 180 / Math.PI;
-
-            // this disregards the possiblity of the geoRect running through the +-180° lon line, but that's not gonna happen in actual use
+            // this doesn't handle the possiblity of the geoRect running through the +-180° lon line, but that's not gonna happen in actual use
             let west = geoRect.sw.lon;
             let east = geoRect.ne.lon;
             let width = east - west;
@@ -953,12 +956,8 @@
             return {lat: lat, lon: lon};
         }
 
+        // TODO getX, getY instead?
         function getXY(lat, lon) {
-            let image = document.getElementById("dropped-image");
-
-            let radians = x => x * Math.PI / 180;
-            let degrees = x => x * 180 / Math.PI;
-
             let west = geoRect.sw.lon;
             let east = geoRect.ne.lon;
             let width = east - west;
@@ -976,21 +975,15 @@
             return {x: x, y: y};
         }
 
-        // TODO refine this. share radians function, remove (also in other places) dependency on .dropped-image (store image size in js)
         function getMetersPerPixel(lat) {
-            let image = document.getElementById("dropped-image");
-            let earthCircumference = 40075.016686 * 1000;  // in meters, at the equator
-            let radians = x => x * Math.PI / 180;
-            metersPerPixel = ((earthCircumference / image.width) * Math.cos(radians(lat))) / (360 / (geoRect.ne.lon - geoRect.sw.lon));
-            return metersPerPixel;
+            return ((earthCircumference / image.width) * Math.cos(radians(lat))) / (360 / (geoRect.ne.lon - geoRect.sw.lon));
         }
 
-        // TODO: this is the length of n (image space pixels) in meters at lat,lon
+        // gets the length of n (image space pixels) in meters at lat
         function getMeters(lat, px) {
             return getMetersPerPixel(lat) * px;
         }
 
-        // n in meters
         function getPixels(lat, m) {
             return m / getMetersPerPixel(lat);
         }
@@ -999,12 +992,13 @@
         // CANVAS DRAWING //
         ////////////////////
 
+        // TODO could increase contrast https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/filter
         function renderPrecisionHelper() {
-            let pc = precisionHelper.ctx;
-            let W = precisionHelper.W;
-            let H = precisionHelper.H;
-            let w = precisionHelper.w;
-            let h = precisionHelper.h;
+            let pc = precisionHelper.getContext("2d");
+            let W = precisionHelper.width;
+            let H = precisionHelper.height;
+            let w = logicalCanvastoPhysicalCanvas(W);
+            let h = logicalCanvastoPhysicalCanvas(H);
 
             pc.clearRect(0, 0, W, H);
 
@@ -1012,7 +1006,6 @@
             pc.strokeStyle = readCssVar("current-selection-stroke");
 
             if (currentCircle) {
-                let image = document.getElementById("dropped-image");
                 let x = currentCircle.x;
                 let y = currentCircle.y;
                 let r = currentCircle.r;
@@ -1223,21 +1216,27 @@
 
             if (highlightedCircleId) {
                 let circle = getCircle(highlightedCircleId)
+
+                // try geo selections
+                // TODO different style for these?
                 if (!circle) {
                     circle = getRelevantGeoSelection(highlightedCircleId);
                 }
 
-                // TODO note: it's possible for there to not be a circle for the passed id iff the user has just deleted a circle through the table in the sidebar – before the table row disappears, the mouseover event is fired at least one more time, calling this function
+                // note: it's possible for there to not be a circle for the passed id iff the user has just deleted a circle through the table in the sidebar – before the table row disappears, the mouseover event is fired at least one more time, calling this function, hence we need to check if there's actually a circle
                 if (circle) {
                     wc.strokeStyle = readCssVar("highlighted-selection-stroke");
                     wc.fillStyle = readCssVar("highlighted-selection-fill");
 
+                    // TODO deduplicate with circle drawing code above
                     wc.beginPath();
                     wc.arc(imageToPhysicalCanvas(circle.x), imageToPhysicalCanvas(circle.y), imageToPhysicalCanvas(circle.r), 0, 2 * Math.PI);
+                    wc.moveTo(imageToPhysicalCanvas(circle.x), imageToPhysicalCanvas(circle.y));
+                    wc.lineTo(imageToPhysicalCanvas(circle.px), imageToPhysicalCanvas(circle.py));
                     wc.fill();
                     wc.stroke();
 
-                    // TODO deduplicate with code above
+                    // TODO deduplicate with rectangle drawing code above
                     if (!settings.transparentBackground) {
                         wc.beginPath();
                         wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
@@ -1307,8 +1306,8 @@
             renderPrecisionHelper();
         });
 
-        // TODO okay, so this is sort of a generic function for checking which circle is closest to the pointer.
-        document.getElementById("work").addEventListener('click', event => {
+        // TODO refine this, make it more elegant, make it faster!
+        document.getElementById("work").addEventListener('mousemove', event => {
             let x = logicalCanvasToImage(event.pageX);
             let y = logicalCanvasToImage(event.pageY);
             let candidateGeoSelections = relevantGeoSelections.filter(circle => {
@@ -1318,11 +1317,24 @@
                 let dy = Math.abs(y - circle.y);
                 return circle.r > Math.sqrt(dx ** 2 + dy ** 2);
             });
-            if (candidateGeoSelections.length > 0) {
+            let candidateSelections = circles.filter(circle => {
+
+                // TODO dedup, make euclid dist function
+                let dx = Math.abs(x - circle.x);
+                let dy = Math.abs(y - circle.y);
+                return circle.r > Math.sqrt(dx ** 2 + dy ** 2);
+            });
+            let candiates = candidateGeoSelections.concat(candidateSelections);
+
+            // TODO do this more elegantly
+            circles.forEach(c => document.getElementById(c.id).classList.remove("hover"));
+            relevantGeoSelections.forEach(c => document.getElementById(c.id).classList.remove("hover"));
+
+            if (candiates.length > 0) {
                 event.preventDefault();
                 let id = -1;
                 let mindist = 999999999;
-                candidateGeoSelections.forEach(circle => {
+                candiates.forEach(circle => {
                     let dx = Math.abs(x - circle.x);
                     let dy = Math.abs(y - circle.y);
                     if (Math.sqrt(dx ** 2 + dy ** 2) < mindist) {
@@ -1330,7 +1342,8 @@
                         id = circle.id;
                     }
                 });
-                console.log(candidateGeoSelections.find(c => c.id == id));
+
+                document.getElementById(id).classList.add("hover");
             }
         });
 
@@ -1386,7 +1399,7 @@
 
             let tr = document.createElement("tr");
             tr.id = id;
-            tr.setAttribute("onmouseover", "highlightCircle(" + id + ")");  // would register this with js, but that's almost less elegant than this
+            tr.setAttribute("onmouseover", "highlightCircle(" + id + ")");
             tr.setAttribute("onmouseout", "highlightCircle(null)");
             tr.innerHTML = cells;
 
@@ -1424,7 +1437,7 @@
 
                 let tr = document.createElement("tr");
                 tr.id = circle.id;
-                tr.setAttribute("onmouseover", "highlightCircle(" + circle.id + ")");  // would register this with js, but that's almost less elegant than this
+                tr.setAttribute("onmouseover", "highlightCircle(" + circle.id + ")");
                 tr.setAttribute("onmouseout", "highlightCircle(null)");
                 tr.innerHTML = cells;
 
@@ -1532,7 +1545,6 @@
                 height += 2 * r * settings.verticalMargin;
             }
 
-            let image = document.getElementById("dropped-image");
             let croppedImage = document.getElementById("cropped-image");
 
             croppedImage.setAttribute("width", width);
@@ -2153,7 +2165,17 @@
 
                 return false;
             });
-            console.log(relevantGeoSelections);
+
+            // if the same circle from image x has also been accepted into image y, image z will see it twice. thus, need to filter here: remove duplicates wrt circle.geoid!
+            // based on https://stackoverflow.com/a/9229821
+            let seen = [];
+            relevantGeoSelections = relevantGeoSelections.filter(circle => {
+                if (seen.includes(circle.geoid)) {
+                    return false;
+                }
+                seen.push(circle.geoid);
+                return true;
+            });
 
             let i = 0;
             relevantGeoSelections = relevantGeoSelections.map(circle => {
@@ -2167,11 +2189,12 @@
                 circle.x = xy.x;
                 circle.y = xy.y;
                 circle.px = pxy.x;
-                circle.py = pxy.x;
+                circle.py = pxy.y;
                 circle.r = r;
 
                 return circle;
             });
+
             renderRelevantGeoSelectionsTable();
         }
 
