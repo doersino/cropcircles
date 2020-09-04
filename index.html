@@ -47,6 +47,8 @@
 
             --dropper-background-color: #555;
             --dropper-color: #aaa;
+            --another-image-dropper-background-color: #333;
+            --another-image-dropper-color: #aaa;
 
             --current-selection-stroke: #fff;
             --old-selections-stroke: rgba(255,255,255,0.5);
@@ -204,14 +206,16 @@
         /* ANOTHER IMAGE DROPPER */
         .another-image-dropper {
             margin: 1rem 0;
-            border: 0.15rem dashed var(--dropper-color);
+            border: 0.15rem dashed var(--another-image-dropper-color);
             border-radius: 1em;
-            color: var(--dropper-color);
+            color: var(--another-image-dropper-color);
+            background-color: var(--another-image-dropper-background-color);
             font-size: 1.4em;
             padding: 1rem;
             text-align: center;
             font-weight: 500;
             letter-spacing: -0.05em;
+            cursor: pointer;
         }
         .another-image-dropper.active {
             background-color: inherit;
@@ -389,7 +393,7 @@
             width: calc(100vw - var(--sidebar-width));
             position: absolute;
         }
-        .dropper-text {
+        .dropper-label {
             border: 0.35rem dashed var(--dropper-color);
             border-radius: 1em;
             color: var(--dropper-color);
@@ -402,7 +406,7 @@
             font-weight: 500;
             letter-spacing: -0.05em;
         }
-        .dropper.active .dropper-text {
+        .dropper.active .dropper-label {
             background-color: inherit;
             filter: invert(1);
         }
@@ -469,8 +473,8 @@
         <p>A tool for cropping circular <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery.</p>
         <span><strong>Usage:</strong> Provide an image, click and drag from a center point to make a selection, refine it with <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>+</kbd> <kbd>-</kbd>, then press <kbd>enter</kbd> to download the cropped result. <a href="javascript:showUsersGuide();">Learn more…</a></span>
 
+        <input id="upload-another-image" type="file" accept="image/*" style="display: none;">
         <div class="another-image-dropper">
-            <input id="upload-another-image" type="file" accept="image/*" style="display: none;">
             Drop or <a>select</a> another image…
         </div>
         TODO implement this
@@ -585,7 +589,7 @@
         <img id="base-image">
         <canvas id="work"></canvas>
         <div class="dropper">
-            <div class="dropper-text">
+            <div class="dropper-label">
                 <input id="upload-image" type="file" accept="image/*" style="display: none;">
                 <em class="drop-or-select">Drop or <a>select</a> image…</em>
                 <em class="load-sample">…or <a>load sample</a>.</em>
@@ -649,6 +653,15 @@
         // * way of switching to another image. drag area at the top of the sidebar, need to adjust scale, geoRect, currentlySelectingCircle, currentCircle, circles, query selectionCache, etc.
         // * finish user's guide, link to it from various settings, etc. take screenshots & record bits of video?
         // * improve code quality
+        /*
+            i.e.:
+            * stop referring to selections as circles
+            * maybe share the svg files document-wide: https://css-tricks.com/svg-use-with-external-reference-take-2/
+            * abstract a bit, move some functions around into proper sections
+            * keep some references to some important elements globally
+            * generally, use classes and ids more sensibly
+            * simplify table rendering code: just rerender each time? would make things easier. also, explicitly order by id (descending)?
+        */
         // * clean up position absolute and fixed in css
 
         /////////////
@@ -745,9 +758,9 @@
         }
 
 
-        ///////////////////
-        // IMAGE LOADING //
-        ///////////////////
+        ///////////////////////
+        // IMAGE (RE)LOADING //
+        ///////////////////////
 
         document.querySelector('.dropper').addEventListener('dragover', e => {
             e.preventDefault();
@@ -757,8 +770,36 @@
             e.preventDefault();
             document.querySelector('.dropper').classList.remove("active");
         });
-
         document.querySelector('.dropper').addEventListener('drop', e => {
+            dropImage(e);
+            document.querySelector('.dropper').classList.remove("active");
+        });
+        document.querySelector('.drop-or-select').addEventListener('click', e => {
+            e.preventDefault();
+            document.getElementById("upload-image").click();
+        });
+        document.getElementById("upload-image").addEventListener('change', pickImage);
+
+        document.querySelector('.another-image-dropper').addEventListener('dragover', e => {
+            e.preventDefault();
+            document.querySelector('.another-image-dropper').classList.add("active");
+        });
+        document.querySelector('.another-image-dropper').addEventListener('dragleave', e => {
+            e.preventDefault();
+            document.querySelector('.another-image-dropper').classList.remove("active");
+        });
+        document.querySelector('.another-image-dropper').addEventListener('drop', e => {
+            dropImage(e);
+            document.querySelector('.another-image-dropper').classList.remove("active");
+        });
+        document.querySelector('.another-image-dropper').addEventListener('click', e => {
+            e.preventDefault();
+            console.log(e);
+            document.getElementById("upload-another-image").click();
+        });
+        document.getElementById("upload-another-image").addEventListener('change', pickImage);
+
+        function dropImage(e) {
             e.preventDefault();
             setStatus("Setting up image…", true);
 
@@ -775,51 +816,36 @@
                     return;
                 }
 
-                let filename = file.name;
-
-                imageInfo.name = file.name;
-                imageInfo.size = file.size;
-
-                extractAndSetGeoRect(filename);
-
-                let reader = new FileReader();
-                reader.onload = e => {
-                    setImage(e.target.result);
-                    clearStatus();
-                };
-                reader.readAsDataURL(file);
+                processDroppedOrPickedImage(file);
             } else {
-                showError("It seems like you've dropped " + files.length + " files. Please drop only one.");
                 clearStatus();
+                showError("It seems like you've dropped " + files.length + " files. Please drop only one.");
             }
-        });
+        }
 
-        document.querySelector('.drop-or-select').addEventListener('click', e => {
-            e.preventDefault();
-            document.getElementById("upload-image").click();
-        });
-
-        document.getElementById("upload-image").addEventListener('change', e => {
+        function pickImage(e) {
             setStatus("Setting up image…", true);
 
-            let files = document.getElementById("upload-image").files;
+            let files = e.target.files;
 
             // the missing "multiple" html attribute prevents more than one file from bein uploaded, and the "accept" attribute makes sure only images can be selected, so we don't need to handle the same errors as for dropping
             let file = files[0];
-            let filename = file.name;
+            processDroppedOrPickedImage(file);
 
+            e.target.value = "";
+        }
+
+        function processDroppedOrPickedImage(file) {
             imageInfo.name = file.name;
             imageInfo.size = file.size;
 
-            extractAndSetGeoRect(filename);
-
             let reader = new FileReader();
             reader.onload = e => {
-                setImage(e.target.result);
-                clearStatus();
+                installImage(e.target.result);
+                clearStatus();  // TODO eh
             };
             reader.readAsDataURL(file);
-        });
+        }
 
         document.querySelector('.load-sample').addEventListener('click', e => {
             e.preventDefault();
@@ -829,23 +855,33 @@
             imageInfo.name = filename;
             imageInfo.size = 7383532;
 
-            extractAndSetGeoRect(filename);
-            setImage(filename);
+            installImage(filename);
             clearStatus();
         });
 
-        function setImage(src) {
+        function installImage(src) {
 
             // store the image in a hidden img tag
             document.getElementById("dropped-image").addEventListener('load', e => {
                 document.querySelector(".dropper").setAttribute("style", "display: none;");
-                drawDroppedImage();
+                scale = null;
+                drawNewImage();
+                geoRect = null;
+                extractAndSetGeoRect(imageInfo.name);
+                currentlySelectingCircle = false;
+                currentCircle = null;
+                highlightedCircleId = null;
+                circles = [];
+                relevantGeoSelections = [];
+                clearTable();
+                recoverSelectionsFromSelectionCache();
+                extractRelevantGeoSelectionsFromSelectionCache();
+                renderWork();
             });
             document.getElementById("dropped-image").setAttribute("src", src);
         }
 
-        // TODO rename, since it's not just "dropped" anymore
-        function drawDroppedImage() {
+        function drawNewImage() {
             let image = document.getElementById("dropped-image");
 
             imageInfo.width = image.width;
@@ -860,8 +896,6 @@
             document.getElementById("base-image").setAttribute("width", imageToLogicalCanvas(image.width))
             document.getElementById("base-image").setAttribute("height", imageToLogicalCanvas(image.height));
 
-            recoverSelectionsFromSelectionCache();
-            extractRelevantGeoSelectionsFromSelectionCache();
             renderWork();
         }
 
@@ -1359,6 +1393,11 @@
             table.insertBefore(tr, table.firstChild);
         }
 
+        function clearTable() {
+            let table = document.getElementById("circles-table-body");
+            table.innerHTML = "";
+        }
+
         function renderRelevantGeoSelectionsTable() {
             if (relevantGeoSelections.length > 0) {
                 document.querySelector(".circles-table-container").classList.remove("hidden");
@@ -1618,6 +1657,7 @@
                 let rm = getMeters(latlon.lat, currentCircle.r);
                 circle = Object.assign(circle, {
                     geo: true,
+                    geoid: circle.id,
                     lat: latlon.lat,
                     lon: latlon.lon,
                     plat: platlon.lat,
@@ -1758,7 +1798,7 @@
         // WINDOW RESIZING //
         /////////////////////
 
-        // TODO future changes to setupWork and drawDroppedImage might break this. safeguard agains this through abstraction or documentation!
+        // TODO future changes to setupWork and drawNewImage might break this. safeguard agains this through abstraction or documentation!
         window.addEventListener('resize', () => {
             let h = window.innerHeight
             let w = window.innerWidth - document.querySelector(".sidebar").offsetWidth;
@@ -1769,7 +1809,7 @@
             workElem.style.height = h + "px";
             setupWork();
 
-            drawDroppedImage();  // this sets scale
+            drawNewImage();  // this sets scale
 
             renderWork();
         });
@@ -2102,7 +2142,7 @@
             relevantGeoSelections = selectionCache.filter(circle => {
 
                 // if already in list of current selections (which can happen during restores or resets) or from the same file, no need to add it
-                if (getCircle(circle.id) || getCircle(circle.geoid) || circles.find(c => c.geoid == circle.id) || circle.fileid == imageInfo.fileid) {
+                if (getCircle(circle.geoid) || circles.find(c => c.geoid == circle.id) || circle.fileid == imageInfo.fileid) {
                     return false;
                 }
 
