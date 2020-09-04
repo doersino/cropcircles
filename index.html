@@ -54,6 +54,8 @@
             --highlighted-selection-stroke: rgba(255,255,255,0.8);
             --highlighted-selection-fill: rgba(255,255,255,0.4);
 
+            --circles-table-geodata-color: #aaa;
+
             --precision-helper-dividers-stroke: #555;
         }
         html {
@@ -376,6 +378,10 @@
         .circles-table tr:hover {
             background-color: var(--input-background-color);
         }
+        .circles-table .geo-candiate {
+            color: var(--circles-table-geodata-color);
+            font-style: italic;
+        }
         .circles-table td {
             padding: 0.25rem;
         }
@@ -393,7 +399,7 @@
             letter-spacing: -0.1em;
         }
         .circles-table span {
-            color: #aaa;
+            color: var(--circles-table-geodata-color);
             letter-spacing: -0.1em;
         }
         .circles-table button {
@@ -482,6 +488,7 @@
                     <td></td>
                 </thead>
                 <tbody id="circles-table-body"></tbody>
+                <tfoot id="circles-table-foot"></tfoot>
             </table>
 
             <button onclick="cropAndDownloadAll();">download all as zip</button>
@@ -664,6 +671,7 @@
         let circles = [];
 
         let selectionCache = [];
+        let relevantGeoSelections = [];
 
         let imageInfo = {
             name: null,
@@ -853,7 +861,8 @@
             document.getElementById("base-image").setAttribute("width", imageToLogicalCanvas(image.width))
             document.getElementById("base-image").setAttribute("height", imageToLogicalCanvas(image.height));
 
-            extractRelevantSelectionsFromSelectionCache();
+            recoverSelectionsFromSelectionCache();
+            extractRelevantGeoSelectionsFromSelectionCache();
             renderWork();
         }
 
@@ -1138,7 +1147,7 @@
 
                 if (!settings.transparentBackground) {
                     wc.beginPath();
-                    wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
+                    wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(4)]);
                     wc.rect(
                         imageToPhysicalCanvas(currentCircle.x - (settings.horizontalMargin + 1) * currentCircle.r),
                         imageToPhysicalCanvas(currentCircle.y - (settings.verticalMargin + 1) * currentCircle.r),
@@ -1165,10 +1174,27 @@
                 });
             }
 
+            // show geo-relevant circles from other images
+            wc.strokeStyle = readCssVar("old-selections-stroke");
+            wc.fillStyle = "transparent";
+            wc.setLineDash([logicalCanvastoPhysicalCanvas(3), logicalCanvastoPhysicalCanvas(6)]);
+            relevantGeoSelections.forEach(circle => {
+                if (circle.id != highlightedCircleId) {
+                    wc.beginPath();
+                    wc.arc(imageToPhysicalCanvas(circle.x), imageToPhysicalCanvas(circle.y), imageToPhysicalCanvas(circle.r), 0, 2 * Math.PI);
+                    wc.fill();
+                    wc.stroke();
+                }
+            });
+            wc.setLineDash([]);
+
             if (highlightedCircleId) {
                 let circle = getCircle(highlightedCircleId)
+                if (!circle) {
+                    circle = getRelevantGeoSelection(highlightedCircleId);
+                }
 
-                // TODO note: it's possible for the to not be a circle for the passed id iff the user has just deleted a circle through the table in the sidebar – before the table row disappears, the mouseover event is fired at least one more time, calling this function
+                // TODO note: it's possible for there to not be a circle for the passed id iff the user has just deleted a circle through the table in the sidebar – before the table row disappears, the mouseover event is fired at least one more time, calling this function
                 if (circle) {
                     wc.strokeStyle = readCssVar("highlighted-selection-stroke");
                     wc.fillStyle = readCssVar("highlighted-selection-fill");
@@ -1235,12 +1261,6 @@
             }
         });
         document.getElementById("work").addEventListener('mouseup', event => {
-
-            // only react if a normal click was performed
-            if (event.button != 0) {
-                return;
-            }
-
             currentlySelectingCircle = false;
 
             // on click, copy previous selection. currentCircle.r is always set here since it's been initialized in the mousedown event
@@ -1252,6 +1272,33 @@
             }
             renderWork();
             renderPrecisionHelper();
+        });
+
+        // TODO okay, so this is sort of a generic function for checking which circle is closest to the pointer.
+        document.getElementById("work").addEventListener('click', event => {
+            let x = logicalCanvasToImage(event.pageX);
+            let y = logicalCanvasToImage(event.pageY);
+            let candidateGeoSelections = relevantGeoSelections.filter(circle => {
+
+                // TODO dedup, make euclid dist function
+                let dx = Math.abs(x - circle.x);
+                let dy = Math.abs(y - circle.y);
+                return circle.r > Math.sqrt(dx ** 2 + dy ** 2);
+            });
+            if (candidateGeoSelections.length > 0) {
+                event.preventDefault();
+                let id = -1;
+                let mindist = 999999999;
+                candidateGeoSelections.forEach(circle => {
+                    let dx = Math.abs(x - circle.x);
+                    let dy = Math.abs(y - circle.y);
+                    if (Math.sqrt(dx ** 2 + dy ** 2) < mindist) {
+                        mindist = Math.sqrt(dx ** 2 + dy ** 2);
+                        id = circle.id;
+                    }
+                });
+                console.log(candidateGeoSelections.find(c => c.id == id));
+            }
         });
 
         // TODO move this function to a better place
@@ -1299,7 +1346,7 @@
                         <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path></svg>
                     </button>
                     <button onclick="deleteCircle(${id})" class="delete">
-                        <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M-10,-10 L10,10 M-10,10 L10,-10"></path></svg>
+                        <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M-9,-9 L9,9 M-9,9 L9,-9"></path></svg>
                     </button>
                 </td>
                 `;
@@ -1313,6 +1360,57 @@
             table.insertBefore(tr, table.firstChild);
         }
 
+        function renderRelevantGeoSelectionsTable() {
+            if (relevantGeoSelections.length > 0) {
+                document.querySelector(".circles-table-container").classList.remove("hidden");
+            }
+
+            let table = document.getElementById("circles-table-foot");
+            table.innerHTML = "";
+
+            relevantGeoSelections.forEach(circle => {
+                let lat = `<span>${(circle.lat + "").toString().substring(0,8)}°</span>`;
+                let lon = `<span>${(circle.lon + "").substring(0,8)}°</span>`;
+                let rm = `<span>${parseInt(circle.rm)}m</span>`;
+
+                let cells = `
+                    <td>${lon}</td>
+                    <td>${lat}</td>
+                    <td>${rm}</td>
+                    <td>
+                        <button onclick="acceptGeoSelection(${circle.id})">
+                            <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M-10,1 L0,9 L9,-9"></path></svg>
+                        </button>
+                    </td>
+                    `;
+
+                let tr = document.createElement("tr");
+                tr.id = circle.id;
+                tr.classList.add("geo-candiate");
+                // TODO fix the following
+                tr.setAttribute("onmouseover", "highlightCircle(" + circle.id + ")");  // would register this with js, but that's almost less elegant than this
+                tr.setAttribute("onmouseout", "highlightCircle(null)");
+                tr.innerHTML = cells;
+
+                table.insertBefore(tr, table.firstChild);
+            });
+        }
+
+        function acceptGeoSelection(id) {
+            let circle = getRelevantGeoSelection(id);
+
+            circle.geoid = circle.id;
+            circle.id = Date.now();
+            circle.fileid = imageInfo.fileid;
+
+            circles.push(circle);
+            addToTable(circle.id);
+            addToSelectionCache(circle);
+            extractRelevantGeoSelectionsFromSelectionCache();
+
+            renderWork();
+        }
+
         function highlightCircle(id) {
             highlightedCircleId = id;
             renderWork();
@@ -1322,6 +1420,7 @@
             circles = circles.filter(c => c.id != id);
             removeFromSelectionCache(id);
             document.getElementById(id).remove();
+            extractRelevantGeoSelectionsFromSelectionCache();
             renderWork();
         }
 
@@ -1331,6 +1430,7 @@
                 document.getElementById(c.id).remove();
             });
             circles = [];
+            extractRelevantGeoSelectionsFromSelectionCache();
             renderWork();
         }
 
@@ -1967,10 +2067,8 @@
             reader.readAsText(file);
         });
 
-        function extractRelevantSelectionsFromSelectionCache() {
-
-            // TODO rename
-            let cachedCirclesForImage = selectionCache.filter(circle => {
+        function recoverSelectionsFromSelectionCache() {
+            let cachedCircles = selectionCache.filter(circle => {
 
                 // if already in list of current selections (which can happen during restores or resets), no need to add it
                 if (getCircle(circle.id)) {
@@ -1984,35 +2082,47 @@
 
                 return false;
             });
+            cachedCircles.forEach(circle => {
+                circles.push(circle);
+                addToTable(circle.id);
+            });
 
-            let cachedCirclesForArea = [];
-            if (geoRect) {
-                cachedCirclesForArea = selectionCache.filter(circle => {
+            renderWork();
+        }
 
-                    // if already in list of current selections (which can happen during restores or resets) or from the same file, no need to add it
-                    if (getCircle(circle.id) || circle.fileid == imageInfo.fileid) {
-                        return false;
-                    }
+        function getRelevantGeoSelection(id) {
+            return relevantGeoSelections.find(c => c.id == id);
+        }
 
-                    // if within the current georect, yeah!
-                    if (circle.geo && geoRect.sw.lat <= circle.lat && circle.lat <= geoRect.ne.lat && geoRect.sw.lon <= circle.lon && circle.lon <= geoRect.ne.lon) {
-                        return true;
-                    }
-
-                    return false;
-                });
+        function extractRelevantGeoSelectionsFromSelectionCache() {
+            if (!geoRect) {
+                return;
             }
 
+            relevantGeoSelections = selectionCache.filter(circle => {
+
+                // if already in list of current selections (which can happen during restores or resets) or from the same file, no need to add it
+                if (getCircle(circle.id) || getCircle(circle.geoid) || circles.find(c => c.geoid == circle.id) || circle.fileid == imageInfo.fileid) {
+                    return false;
+                }
+
+                // if within the current georect, yeah!
+                if (circle.geo && geoRect.sw.lat <= circle.lat && circle.lat <= geoRect.ne.lat && geoRect.sw.lon <= circle.lon && circle.lon <= geoRect.ne.lon) {
+                    return true;
+                }
+
+                return false;
+            });
+            console.log(relevantGeoSelections);
+
             let i = 0;
-            cachedCirclesForArea = cachedCirclesForArea.map(circle => {
+            relevantGeoSelections = relevantGeoSelections.map(circle => {
                 let xy = getXY(circle.lat, circle.lon);
                 let pxy = getXY(circle.plat, circle.plon);
                 let r = getPixels(circle.plat, circle.rm);
 
-                // avoid messing with the original circle since it "belongs" to a different image
-                circle.id = Date.now() + i++;
-                circle.fileid = imageInfo.fileid;
-                // TODO this fixes the issues but removing this circle then also removes it globally? which i don't get? investigate! since this is actually ok if i can understand why it works the way it does
+                // clone to avoid modifying the original, which "belongs" to another image
+                circle = JSON.parse(JSON.stringify(circle));
 
                 circle.x = xy.x;
                 circle.y = xy.y;
@@ -2022,17 +2132,7 @@
 
                 return circle;
             });
-
-            let newCircles = cachedCirclesForImage.concat(cachedCirclesForArea);
-
-            // TODO yeah, this doesn't work – i think i need separated caches. when reading from geo cache (where only units of latlon/m are stored), if match, make a copy in the image cache with new fileid but same selection id
-            // put geo ones into a separate section of the table (or separate table) and draw them differently, with possiblilty to promote them into image (checkmark/delete button, where the delete button just removes them from consideration but leaves them in storage)? and accept/delete all?
-
-            newCircles.forEach(c => {
-                circles.push(c);  // TODO abstract?
-                addToTable(c.id);
-            });
-            renderWork();
+            renderRelevantGeoSelectionsTable();
         }
 
         function addToSelectionCache(circle) {
