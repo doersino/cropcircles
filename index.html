@@ -607,6 +607,7 @@
         <p>TODO iosevka, TODO inspo project, TODO mddb as base for sidebar, TODO mdn, TODO smaple image from google maps at https://www.google.com/maps/place/42°18'48.7%22N+113°51'19.8%22W/@42.3135278,-113.8576887,6000m/ and dl'd with aerialbot</p>
     </section>
 
+    <script src="libs/Stuk-jszip-25d401e/dist/jszip.min.js"></script>
     <script>
         // TODO now, implement:
         // * "download all as zip" using https://stuk.github.io/jszip/
@@ -1351,22 +1352,12 @@
             return filename;
         }
 
-        function cropAndDownload(id) {
+        function cropImageToSelection(id) {
             let circle = getCircle(id);
 
             let x = circle.x;
             let y = circle.y;
             let r = circle.r;
-
-            let filename = assembleFilename(id);
-
-            let imageType = "image/png";
-            let imageQuality = 1;
-            let imageExtension = ".png";
-            if (!settings.transparentBackground) {
-                imageType = "image/jpeg";
-                imageExtension = ".jpg";
-            }
 
             let width = Math.ceil(r * 2);
             let height = Math.ceil(r * 2);
@@ -1397,21 +1388,78 @@
                 cic.restore();
             }
 
+            return croppedImage;
+        }
+
+        function cropAndBlob(id, blobAction) {
+            let croppedImage = cropImageToSelection(id);
+            let filename = assembleFilename(id);
+
+            let imageType = "image/png";
+            let imageQuality = 1;
+            let imageExtension = ".png";
+            if (!settings.transparentBackground) {
+                imageType = "image/jpeg";
+                imageExtension = ".jpg";
+            }
+
             croppedImage.toBlob(blob => {
+                blobAction(filename + imageExtension, blob);
+            }, imageType, imageQuality);
+        }
+
+        function cropAndDownload(id) {
+            cropAndBlob(id, (filename, blob) => {
                 let url = URL.createObjectURL(blob);
                 let dummyLink = document.createElement("a");
                 dummyLink.setAttribute("href", url);
-                dummyLink.setAttribute("download", filename + imageExtension);
+                dummyLink.setAttribute("download", filename);
                 dummyLink.style.display = "none";
                 document.body.appendChild(dummyLink);
                 dummyLink.click();
                 document.body.removeChild(dummyLink);
 
                 URL.revokeObjectURL(url);
-            }, imageType, imageQuality);
+            });
         }
 
-        // TODO zip all of em up
+        async function cropAndDownloadAll() {
+
+            // pieced together from jszip docs and fiddling around, genuinely no clue how it works or if it could be done better
+            let filename = "cropcircles-" + imageInfo.name.replace(/\./g, "-") + ".zip";
+            setStatus("Generating ZIP…", true);
+
+            let zip = new JSZip();
+
+            let promises = circles.map(circle => {
+                return new Promise(function (resolve, reject) {
+                    cropAndBlob(circle.id, (filename, blob) => {
+                        resolve([filename, blob]);
+                    });
+                });
+            });
+
+            let resolveds = await Promise.all(promises);
+            resolveds.forEach(content => {
+                zip.file(content[0], content[1]);
+            });
+
+            zip.generateAsync({type: "blob"})
+                .then(function(blob) {
+                    let url = URL.createObjectURL(blob);
+                    let dummyLink = document.createElement("a");
+                    dummyLink.setAttribute("href", url);
+                    dummyLink.setAttribute("download", filename);
+                    dummyLink.style.display = "none";
+                    document.body.appendChild(dummyLink);
+                    dummyLink.click();
+                    document.body.removeChild(dummyLink);
+
+                    URL.revokeObjectURL(url);
+
+                    clearStatus();
+                });
+        }
 
 
         //////////////////////////
