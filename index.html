@@ -58,7 +58,7 @@
             --highlighted-selection-stroke: rgba(255,255,255,0.8);
             --highlighted-selection-fill: rgba(255,255,255,0.4);
 
-            --circles-table-geodata-color: #aaa;
+            --selections-table-geodata-color: #aaa;
 
             --precision-helper-dividers-stroke: #555;
         }
@@ -228,47 +228,47 @@
         }
 
         /* OLD CIRCLES TABLE */
-        .circles-table-container.hidden {
+        .selections-table-container.hidden {
             display: none;
         }
-        .circles-table {
+        .selections-table {
             width: calc(100% + 2em);
             margin-left: -1em;
             border-spacing: 0;
         }
-        .circles-table thead {
+        .selections-table thead {
             text-transform: uppercase;
             font-size: 0.9em;
             font-weight: 900;
         }
-        .circles-table tr:hover,
-        .circles-table tr.hover {
+        .selections-table tr:hover,
+        .selections-table tr.hover {
             background-color: var(--input-background-color);
         }
-        .circles-table tfoot span {
+        .selections-table tfoot span {
             font-style: italic;
         }
-        .circles-table td {
+        .selections-table td {
             padding: 0.25rem;
         }
-        .circles-table td:first-child {
+        .selections-table td:first-child {
             padding-left: 1rem;
         }
-        .circles-table td:last-child {
+        .selections-table td:last-child {
             text-align: right;
             padding-right: 1rem;
         }
-        .circles-table u {
+        .selections-table u {
             font-size: 0.8em;
             font-style: italic;
             text-decoration: none;
             letter-spacing: -0.1em;
         }
-        .circles-table span {
-            color: var(--circles-table-geodata-color);
+        .selections-table span {
+            color: var(--selections-table-geodata-color);
             letter-spacing: -0.1em;
         }
-        .circles-table button {
+        .selections-table button {
             width: auto;
             margin: 0 0 0 -0.2em;
             display: inline-block;
@@ -278,7 +278,7 @@
             text-align: center;
             border-radius: 99em;
         }
-        .circles-table .delete:hover {
+        .selections-table .delete:hover {
             color: var(--danger-color);
         }
 
@@ -306,7 +306,7 @@
             font-weight: 200;
         }
         h2 {
-            font-weight: 300;
+            font-weight: bold;
             text-transform: uppercase;
             font-size: 1.5em;
             margin-top: 1.5em;
@@ -483,23 +483,23 @@
 
         <span><strong>Usage:</strong> Provide an image, click and drag from a center point to make a selection, refine it with <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>+</kbd> <kbd>-</kbd>, then press <kbd>enter</kbd> to download the cropped result. <a href="javascript:showUsersGuide();">Learn more…</a></span>
 
-        <section class="circles-table-container hidden">
+        <section class="selections-table-container hidden">
             <hr>
 
             <p><span>The following reverse-chronological table lists your selections within this image, enabling redownloading (with different settings, say) and deletion.</span></p>
 
-            <table class="circles-table">
+            <table class="selections-table">
                 <thead>
                     <td>x →</td>
                     <td>y ↓</td>
                     <td>radius</td>
                     <td></td>
                 </thead>
-                <tbody id="circles-table-body"></tbody>
-                <tfoot id="circles-table-foot"></tfoot>
+                <tbody id="selections-table-body"></tbody>
+                <tfoot id="selections-table-foot"></tfoot>
             </table>
 
-            <button onclick="cropAndDownloadAll();">download all as zip</button>
+            <button onclick="cropAndDownloadAll();">download all <strong id="selection-count">0</strong> as zip</button>
             TODO set class and attribute .disabled if circles variable is empty, also show a message within the table
         </section>
 
@@ -520,7 +520,7 @@
         <span>Uncheck this if you prefer downloading your images through the table above <em>after</em> making a bunch of selections.</span>
 
         <input type="text" class="filename-template-field" data-default="" placeholder="FILENAME TEMPLATE" value="" oninput="updateFilenameTemplate(this)">
-        <span>Template for the filenames of result images (but don't specify the file extension, it's added automatically). You can look up the list of template variables in <a href="">the user's guide TODO link (should be: sw…ne…, original filename, current time in iso form, circle id, some joke thingy?)</a>. If left empty, the default "cropcircles-x{x}y{y}r{r}" (plus "-{lat},{lon},{rm}m" if the current image <a href="">has geo data TODO link to section of users guide</a>) will be used.</span>
+        <span>Template for the filenames of result images (but don't specify the file extension, it's added automatically). You can look up the list of template variables in <a href="">the user's guide TODO link</a>. If left empty, the default "cropcircles-x{x}y{y}r{r}" (or "cropcircles-{lat},{lon},{rm}m-x{x}y{y}r{r}" if the current image <a href="">has geo data TODO link to section of users guide</a>) will be used.</span>
 
         <hr>
 
@@ -627,6 +627,24 @@
 
         The settings in the sidebar... TODO
 
+        TODO filename:
+            file: orig filename
+            id: internal circle id (unix timestamp + ms of creation)
+            date: in iso format
+            rand: random number btwn 0 and 1
+            x: x coord of circle center in image
+            y: analogous
+            r: radius in px
+
+            if geodata:
+
+            georect: georect of input image
+            lat: lat of center of circle (assuming web mercator, etc.)
+            lon: analogous
+            rm: radius in meters
+
+            default: default template (TODO), useful for prefixing of postfixing
+
         <p>TODO</p>
 
         <h2>Geo-Awareness</h2>
@@ -654,18 +672,13 @@
     <script src="libs/Stuk-jszip-25d401e/dist/jszip.min.js"></script>
     <script>
         // TODO now, implement:
-        // "// TODO refine this, make it more elegant, make it faster!"
-        // * related: on hover over circle, of course also highlight in in the image
-        // * change filename scheme so latlon comes fst – also show number of selections within current image somewhere
-        // * filename template: also have random number. also default template as parameter, for adding something in front, etc.
-        // * respect "show old selections" checkbox for geo ones
-        // * show or hide pxpy bit in highlighted selection? or old selections in general?
+        // * show or hide pxpy bit in highlighted selection? or old selections in general? also, make highlighted geoselections different from normal ones? generally revisit "circle" styles!
         // * improve code quality
         /*
             i.e.:
             * keep some references to some important elements globally
-            * stop referring to selections as circles
-            * abstract a bit, move some functions around into proper sections
+            * stop referring to selections as circles EVERYWHERE
+            * abstract a bit, move some functions around into proper sections, dedup settings/circles backup
             * generally, use classes and ids more sensibly
             * simplify table rendering code: just rerender each time? would make things easier. also, explicitly order by id (descending)?
         */
@@ -1206,21 +1219,21 @@
                         wc.stroke();
                     }
                 });
-            }
 
-            // show geo-relevant circles from other images
-            wc.strokeStyle = readCssVar("old-selections-stroke");
-            wc.fillStyle = "transparent";
-            wc.setLineDash([logicalCanvastoPhysicalCanvas(3), logicalCanvastoPhysicalCanvas(6)]);
-            relevantGeoSelections.forEach(circle => {
-                if (circle.id != highlightedCircleId) {
-                    wc.beginPath();
-                    wc.arc(imageToPhysicalCanvas(circle.x), imageToPhysicalCanvas(circle.y), imageToPhysicalCanvas(circle.r), 0, 2 * Math.PI);
-                    wc.fill();
-                    wc.stroke();
-                }
-            });
-            wc.setLineDash([]);
+                // show geo-relevant circles from other images
+                wc.strokeStyle = readCssVar("old-selections-stroke");
+                wc.fillStyle = "transparent";
+                wc.setLineDash([logicalCanvastoPhysicalCanvas(3), logicalCanvastoPhysicalCanvas(6)]);
+                relevantGeoSelections.forEach(circle => {
+                    if (circle.id != highlightedCircleId) {
+                        wc.beginPath();
+                        wc.arc(imageToPhysicalCanvas(circle.x), imageToPhysicalCanvas(circle.y), imageToPhysicalCanvas(circle.r), 0, 2 * Math.PI);
+                        wc.fill();
+                        wc.stroke();
+                    }
+                });
+                wc.setLineDash([]);
+            }
 
             if (highlightedCircleId) {
                 let circle = getCircle(highlightedCircleId)
@@ -1266,6 +1279,12 @@
         // CIRCLE SELECTION //
         //////////////////////
 
+        let eucl = (x1, y1, x2, y2) => {
+            let dx = Math.abs(x1 - x2);
+            let dy = Math.abs(y1 - y2);
+            return Math.sqrt(dx ** 2 + dy ** 2);
+        };
+
         document.getElementById("work").addEventListener('mousedown', event => {
 
             // only react if a normal click was performed
@@ -1289,9 +1308,7 @@
                 let px = logicalCanvasToImage(event.pageX);  // see caveat above
                 let py = logicalCanvasToImage(event.pageY);  // analogous
 
-                let dx = Math.abs(px - currentCircle.x);
-                let dy = Math.abs(py - currentCircle.y);
-                let r = Math.sqrt(dx ** 2 + dy ** 2);
+                let r = eucl(px, py, currentCircle.x, currentCircle.y);
 
                 currentCircle.px = px;
                 currentCircle.py = py;
@@ -1314,45 +1331,45 @@
             renderPrecisionHelper();
         });
 
-        // TODO refine this, make it more elegant, make it faster!
+        // TODO comment: circle hover => highlight
         document.getElementById("work").addEventListener('mousemove', event => {
+
+            if (!settings.showOldSelections || currentlySelectingCircle) {
+
+                // clear any previous highlights
+                highlightedCircleId = null;
+                circles.forEach(c => document.getElementById(c.id).classList.remove("hover"));
+                relevantGeoSelections.forEach(c => document.getElementById(c.id).classList.remove("hover"));
+                return;
+            }
+
             let x = logicalCanvasToImage(event.pageX);
             let y = logicalCanvasToImage(event.pageY);
-            let candidateGeoSelections = relevantGeoSelections.filter(circle => {
 
-                // TODO dedup, make euclid dist function
-                let dx = Math.abs(x - circle.x);
-                let dy = Math.abs(y - circle.y);
-                return circle.r > Math.sqrt(dx ** 2 + dy ** 2);
+            let candidates = circles.concat(relevantGeoSelections).filter(circle => {
+                let r = eucl(x, y, circle.x, circle.y);
+                return circle.r > r;
             });
-            let candidateSelections = circles.filter(circle => {
 
-                // TODO dedup, make euclid dist function
-                let dx = Math.abs(x - circle.x);
-                let dy = Math.abs(y - circle.y);
-                return circle.r > Math.sqrt(dx ** 2 + dy ** 2);
-            });
-            let candiates = candidateGeoSelections.concat(candidateSelections);
-
-            // TODO do this more elegantly
+            highlightedCircleId = null;
             circles.forEach(c => document.getElementById(c.id).classList.remove("hover"));
             relevantGeoSelections.forEach(c => document.getElementById(c.id).classList.remove("hover"));
 
-            if (candiates.length > 0) {
-                event.preventDefault();
+            if (candidates.length > 0) {
+                let rMin = 999999999;
                 let id = -1;
-                let mindist = 999999999;
-                candiates.forEach(circle => {
-                    let dx = Math.abs(x - circle.x);
-                    let dy = Math.abs(y - circle.y);
-                    if (Math.sqrt(dx ** 2 + dy ** 2) < mindist) {
-                        mindist = Math.sqrt(dx ** 2 + dy ** 2);
+                candidates.forEach(circle => {
+                    let r = eucl(x, y, circle.x, circle.y);
+                    if (r < rMin) {
+                        rMin = r;
                         id = circle.id;
                     }
                 });
 
                 document.getElementById(id).classList.add("hover");
+                highlightedCircleId = id;
             }
+            renderWork();
         });
 
         // TODO move this function to a better place
@@ -1377,9 +1394,9 @@
         }
 
         function addToTable(id) {
-            document.querySelector(".circles-table-container").classList.remove("hidden");
+            document.querySelector(".selections-table-container").classList.remove("hidden");
 
-            let table = document.getElementById("circles-table-body");
+            let table = document.getElementById("selections-table-body");
             let circle = getCircle(id);
 
             let lat = "";
@@ -1412,19 +1429,23 @@
             tr.innerHTML = cells;
 
             table.insertBefore(tr, table.firstChild);
+
+            document.getElementById("selection-count").innerText = circles.length;
         }
 
         function clearTable() {
-            let table = document.getElementById("circles-table-body");
+            let table = document.getElementById("selections-table-body");
             table.innerHTML = "";
+
+            document.getElementById("selection-count").innerText = circles.length;
         }
 
         function renderRelevantGeoSelectionsTable() {
             if (relevantGeoSelections.length > 0) {
-                document.querySelector(".circles-table-container").classList.remove("hidden");
+                document.querySelector(".selections-table-container").classList.remove("hidden");
             }
 
-            let table = document.getElementById("circles-table-foot");
+            let table = document.getElementById("selections-table-foot");
             table.innerHTML = "";
 
             relevantGeoSelections.forEach(circle => {
@@ -1479,14 +1500,16 @@
             document.getElementById(id).remove();
             extractRelevantGeoSelectionsFromSelectionCache();
             renderWork();
+
+            document.getElementById("selection-count").innerText = circles.length;
         }
 
         function deleteAllCircles() {
             circles.forEach(c => {
                 removeFromSelectionCache(c.id);
-                document.getElementById(c.id).remove();
             });
             circles = [];
+            clearTable();
             extractRelevantGeoSelectionsFromSelectionCache();
             renderWork();
 
@@ -1511,29 +1534,38 @@
                 );
             };
 
-            // TODO more? original filename, date, ...
             let filenameVariables = {
+                file: imageInfo.name,
+                id: circle.id,
+                date: (new Date()).toISOString().replace(/\:/g, "."),
+                rand: Math.random(),
                 x: parseInt(circle.x),
                 y: parseInt(circle.y),
-                r: parseInt(circle.r)
+                r: parseInt(circle.r),
             }
 
             if (circle.geo) {
                 filenameVariables = Object.assign(filenameVariables, {
+                    georect: `sw${geoRect.sw.lat},${geoRect.sw.lon}ne${geoRect.ne.lat},${geoRect.ne.lon}`,
                     lat: circle.lat,
                     lon: circle.lon,
                     rm: circle.rm
                 });
             }
 
+            let defaultFilenameTemplate = supplant("cropcircles-x{x}y{y}r{r}", filenameVariables);
+            if (geoRect) {
+                defaultFilenameTemplate = supplant("cropcircles-{lat},{lon},{rm}m-x{x}y{y}r{r}", filenameVariables);
+            }
+
+            filenameVariables = Object.assign(filenameVariables, {
+                default: defaultFilenameTemplate
+            });
+
             let filename = supplant(settings.filenameTemplate, filenameVariables);
 
             if (filename == "") {  // this means the template was not set
-                let defaultFilenameTemplate = "cropcircles-x{x}y{y}r{r}"
-                if (geoRect) {
-                    defaultFilenameTemplate += "-{lat},{lon},{rm}m"
-                }
-                filename = supplant(defaultFilenameTemplate, filenameVariables);
+                filename = supplant("{default}", filenameVariables);
             }
 
             return filename;
@@ -2117,7 +2149,8 @@
 
                 selectionCache = tmpSelectionCache;
                 writeSelectionCacheToLocalStorage();
-                extractRelevantSelectionsFromSelectionCache();
+                extractRelevantGeoSelectionsFromSelectionCache();
+                recoverSelectionsFromSelectionCache();
 
                 setStatus("Successfully restored selection cache from \"" + filename + "\".");
 
