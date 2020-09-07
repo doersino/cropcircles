@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8" lang="en">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <link rel="apple-touch-icon" href="assets/favicon.png">
     <title>Crop Circles</title>
     <!-- TODO remove unneeded weights etc. -->
-    <link rel="stylesheet" href="libs/ttf-iosevka-aile-3.4.6/iosevka-aile.css">
+    <link rel="stylesheet" href="assets/iosevka-aile/3.4.6/iosevka-aile.css">
     <style>
         * {
             box-sizing: border-box;
@@ -686,7 +686,7 @@
         <p>TODO iosevka, TODO inspo project, TODO mddb as base for sidebar, TODO mdn, TODO smaple image from google maps at https://www.google.com/maps/place/42°18'48.7%22N+113°51'19.8%22W/@42.3135278,-113.8576887,6000m/ and dl'd with aerialbot</p>
     </section>
 
-    <script src="libs/Stuk-jszip-25d401e/dist/jszip.min.js"></script>
+    <script src="assets/jszip/25d401e/dist/jszip.min.js"></script>
     <script>
         // TODO now, implement:
         // * keep some references to some important elements globally: droppers (should really be called drop targets anyway), cropped image, etc.
@@ -699,7 +699,7 @@
         // GLOBALS //
         /////////////
 
-        let dpr = 1;
+        let dpr = null;
         let scale = null;
         let geoRect = null;
 
@@ -1186,7 +1186,7 @@
         document.querySelector('.load-sample').addEventListener('click', e => {
             e.preventDefault();
             setStatus("Setting up sample image…", true);
-            let filename = "sample-sw42.286577541476696,-113.90409924217032ne42.340476458523305,-113.80691475782969.jpg";
+            let filename = "assets/sample-sw42.286577541476696,-113.90409924217032ne42.340476458523305,-113.80691475782969.jpg";
 
             imageInfo.name = filename;
             imageInfo.size = 7383532;
@@ -1195,6 +1195,7 @@
             clearStatus();
         });
 
+        // receives either a path or a base64-encoded value
         function installImage(src) {
 
             // show the image selector in the side bar upon first image selection
@@ -1298,6 +1299,10 @@
         }
 
         function scaleCurrentSelection(s) {
+            if (!currentSelection) {
+                return;
+            }
+
             currentSelection.r += s;
             if (currentSelection.r < 0) {
                 currentSelection.r = 0;
@@ -1312,15 +1317,20 @@
             renderPrecisionHelper();
         }
 
-        // TODO do nothing if there is not current selection (to avoid console errors more than anything) – the same goes for related functions
         function moveCurrentSelection(x, y) {
 
-            // TODO comment: selection cloning on move: move it by 2r
-            if (!currentSelection && selections.length > 0) {
-                let sel = selections[selections.length-1];
-                let x0 = sel.x + Math.sign(x) * 2 * sel.r;
-                let y0 = sel.y + Math.sign(y) * 2 * sel.r;
-                cloneMostRecentSelectionAt(x0, y0);
+            // if no current selection, clone the previous one next to itself in the direction of the move
+            if (!currentSelection) {
+                if (selections.length > 0) {
+                    let sel = selections[selections.length-1];
+                    let x0 = sel.x + Math.sign(x) * 2 * sel.r;
+                    let y0 = sel.y + Math.sign(y) * 2 * sel.r;
+                    cloneMostRecentSelectionAt(x0, y0);
+
+                    renderWork();
+                    renderPrecisionHelper();
+                }
+                return;
             }
 
             currentSelection.x += x;
@@ -1345,7 +1355,9 @@
 
         function deleteMostRecentSelection() {
             let previousSelection = selections[selections.length-1];
-            deleteSelection(previousSelection.id);
+            if (previousSelection) {
+                deleteSelection(previousSelection.id);
+            }
         }
 
         function getSelection(id) {
@@ -1390,28 +1402,28 @@
             return Math.sqrt(dx ** 2 + dy ** 2);
         };
 
-        work.addEventListener('mousedown', event => {
+        work.addEventListener('mousedown', e => {
 
             // only react if a normal click was performed
-            if (event.button != 0) {
+            if (e.button != 0) {
                 return;
             }
 
             currentlySelecting = true;
             currentSelection = {
-                x: logicalCanvasToImage(event.pageX),  // - left offset of #work wrt viewport if top left corner of canvas were not at (0,0)
-                y: logicalCanvasToImage(event.pageY),  // analogous
-                px: logicalCanvasToImage(event.pageX),
-                py: logicalCanvasToImage(event.pageY),
+                x: logicalCanvasToImage(e.pageX),  // - left offset of #work wrt viewport if top left corner of canvas were not at (0,0)
+                y: logicalCanvasToImage(e.pageY),  // analogous
+                px: logicalCanvasToImage(e.pageX),
+                py: logicalCanvasToImage(e.pageY),
                 r: 0
             };
             renderWork();
             renderPrecisionHelper();
         });
-        work.addEventListener('mousemove', event => {
+        work.addEventListener('mousemove', e => {
             if (currentlySelecting) {
-                let px = logicalCanvasToImage(event.pageX);  // see caveat above
-                let py = logicalCanvasToImage(event.pageY);  // analogous
+                let px = logicalCanvasToImage(e.pageX);  // see caveat above
+                let py = logicalCanvasToImage(e.pageY);  // analogous
 
                 let r = eucl(px, py, currentSelection.x, currentSelection.y);
 
@@ -1422,13 +1434,13 @@
                 renderPrecisionHelper();
             }
         });
-        work.addEventListener('mouseup', event => {
+        work.addEventListener('mouseup', e => {
             currentlySelecting = false;
 
-            // on click, copy previous selection. currentSelection.r is always set here since it's been initialized in the mousedown event
+            // on click, copy previous selection. currentSelection.r is always set here since it's been initialized in the mousedown e
             if (currentSelection.r == 0 && selections.length > 0) {
-                let x = logicalCanvasToImage(event.pageX);  // see caveat above
-                let y = logicalCanvasToImage(event.pageY);  // analogous
+                let x = logicalCanvasToImage(e.pageX);  // see caveat above
+                let y = logicalCanvasToImage(e.pageY);  // analogous
 
                 cloneMostRecentSelectionAt(x, y);
             }
@@ -1436,20 +1448,20 @@
             renderPrecisionHelper();
         });
 
-        // TODO comment: circle hover => highlight
-        work.addEventListener('mousemove', event => {
+        // circle hover => highlight
+        work.addEventListener('mousemove', e => {
 
             if (!settings.showSelections || currentlySelecting) {
 
                 // clear any previous highlights
                 highlightedSelectionId = null;
                 selections.forEach(s => tableRowFor(s.id).classList.remove("hover"));
-                relevantGeoSelections.forEach(s => tableRowFor(id.s).classList.remove("hover"));
+                relevantGeoSelections.forEach(s => tableRowFor(s.id).classList.remove("hover"));
                 return;
             }
 
-            let x = logicalCanvasToImage(event.pageX);
-            let y = logicalCanvasToImage(event.pageY);
+            let x = logicalCanvasToImage(e.pageX);
+            let y = logicalCanvasToImage(e.pageY);
 
             let candidates = selections.concat(relevantGeoSelections).filter(sel => {
                 let r = eucl(x, y, sel.x, sel.y);
@@ -1472,6 +1484,7 @@
                 });
 
                 tableRowFor(id).classList.add("hover");
+                //tableRowFor(id).scrollIntoView();  // this would be neat if it was a no-op when the row is already in view
                 highlightedSelectionId = id;
             }
             renderWork();
@@ -1569,7 +1582,6 @@
             return document.getElementById(id);
         }
 
-        // TODO make this prettier
         function updateDownloadButtonAndTablePlaceholder() {
             document.getElementById("selection-count").innerText = selections.length;
 
@@ -1694,8 +1706,7 @@
             return croppedImage;
         }
 
-        // TODO rename or keep cause funny?
-        function cropAndBlob(id, blobAction) {
+        function cropAndPrepareBlob(id, blobAction) {
             let croppedImage = cropImageToSelection(id);
             let filename = assembleFilename(id);
 
@@ -1713,7 +1724,7 @@
         }
 
         function cropAndDownload(id) {
-            cropAndBlob(id, (filename, blob) => {
+            cropAndPrepareBlob(id, (filename, blob) => {
                 let url = URL.createObjectURL(blob);
                 download(url, filename)
                 URL.revokeObjectURL(url);
@@ -1730,7 +1741,7 @@
 
             let promises = selections.map(sel => {
                 return new Promise(function (resolve, reject) {
-                    cropAndBlob(sel.id, (filename, blob) => {
+                    cropAndPrepareBlob(sel.id, (filename, blob) => {
                         resolve([filename, blob]);
                     });
                 });
@@ -1756,22 +1767,21 @@
         // KEYBOARD INTERACTION //
         //////////////////////////
 
-        // TODO only enable this once image has been dropped and at least one selection exists? (= if (selections))
-        window.addEventListener("keydown", function (event) {
+        window.addEventListener("keydown", function (e) {
 
             // disable this if the focus is on one of the inputs in the sidebar – interferes with filename input, possibly others too!
             // or if any modifiers are pressed – the user is trying to interact with their browser, not with me!
-            if (event.target.tagName == "INPUT" || event.ctrlKey || event.altKey || event.metaKey) {
+            if (e.target.tagName == "INPUT" || e.ctrlKey || e.altKey || e.metaKey) {
                 return;
             }
 
             let factor = 1;
             let larger = 20;
-            if (event.shiftKey) {
+            if (e.shiftKey) {
                 factor = larger;
             }
 
-            switch (event.key) {
+            switch (e.key) {
                 case "Enter":
                     acceptCurrentSelection();
                     break;
@@ -1827,7 +1837,7 @@
               // TODO switch based on .code ("KeyW", etc.) for wasd. how to handle default case above then?
 
             // cancel the default action to avoid it being handled twice
-            event.preventDefault();
+            e.preventDefault();
         }, true);
 
 
@@ -1923,43 +1933,49 @@
             download(url, "cropcircles-settings.json");
         }
 
+        let uploadSettingsFilePicker = document.getElementById("upload-settings");
+
         function restoreSettings() {
-            document.getElementById("upload-settings").click();
+            uploadSettingsFilePicker.click();
         }
 
-        document.getElementById("upload-settings").addEventListener('change', e => {
-            let files = document.getElementById("upload-settings").files;
+        // used for both settings and selection cache
+        function jsonFilePickerChanged(e, callback) {
+            let files = e.target.files;
             let file = files[0];
 
             let filename = file.name;
 
             let reader = new FileReader();
             reader.onload = e => {
+                let s = e.target.result;
+
+                let json;
                 try {
-                    let s = e.target.result;
-
-                    let rawSettings;
-                    try {
-                        rawSettings = JSON.parse(s);
-                    } catch (e) {
-                        showError("The file \"" + file.name + "\" doesn't seem to contain a valid JSON value.");
-                    }
-
-                    if (!("settings" in rawSettings)) {
-                        showError("The file \"" + file.name + "\" doesn't contain a \"settings\" attribute. Did you upload a selection cache backup by accident?");
-                        return;
-                    }
-                    settings = rawSettings.settings;
-                    applySettings();
-                    setStatus("Successfully restored settings from \"" + filename + "\".")
-
-                    // forget about the file, allowing the event handler to fire again if the user uploads the same file again
-                    document.getElementById("upload-settings").value = "";
+                    json = JSON.parse(s);
                 } catch (e) {
                     showError("The file \"" + file.name + "\" doesn't seem to contain a valid JSON value.");
                 }
+
+                // call callback
+                callback(filename, json);
+
+                // forget about the file, allowing the event handler to fire again if the user uploads the same file again
+                uploadSettingsFilePicker.value = "";
             };
             reader.readAsText(file);
+        }
+
+        uploadSettingsFilePicker.addEventListener('change', e => {
+            jsonFilePickerChanged(e, (filename, rawSettings) => {
+                if (!("settings" in rawSettings)) {
+                    showError("The file \"" + filename + "\" doesn't contain a \"settings\" attribute. Did you upload a selection cache backup by accident?");
+                    return;
+                }
+                settings = rawSettings.settings;
+                applySettings();
+                setStatus("Successfully restored settings from \"" + filename + "\".");
+            });
         });
 
         function resetSettingsToDefaults(quietly = false) {
@@ -2083,37 +2099,23 @@
             download(url, "cropcircles-selectioncache.json");
         }
 
+        let uploadSelectionCacheFilePicker = document.getElementById("upload-selectioncache");
+
         function restoreSelectionCache() {
-            document.getElementById("upload-selectioncache").click();
+            uploadSelectionCacheFilePicker.click();
         }
 
-        // TODO dedup this with the same for settings, by writing a function taking a callback that will be set as reader.onload
-        document.getElementById("upload-selectioncache").addEventListener('change', e => {
-            let files = document.getElementById("upload-selectioncache").files;   // TODO e.target? generally, standardize "event" or "e"
-            let file = files[0];
-
-            let filename = file.name;
-
-            let reader = new FileReader();
-            reader.onload = e => {
-                let s = e.target.result;
-
-                let rawSelectionCache;
-                try {
-                    rawSelectionCache = JSON.parse(s);
-                } catch (e) {
-                    showError("The file \"" + file.name + "\" doesn't seem to contain a valid JSON value.");
-                }
-
+        uploadSelectionCacheFilePicker.addEventListener('change', e => {
+            jsonFilePickerChanged(e, (filename, rawSelectionCache) => {
                 if (!("selectioncache" in rawSelectionCache)) {
-                    showError("The file \"" + file.name + "\" doesn't contain a \"selectioncache\" attribute. Did you upload a settings backup by accident?");
+                    showError("The file \"" + filename + "\" doesn't contain a \"selectioncache\" attribute. Did you upload a settings backup by accident?");
                     return;
                 }
                 let tmpSelectionCache = rawSelectionCache.selectioncache;
 
                 // merge with current selection cache: only add those that are not already in the selection cache
                 tmpSelectionCache = tmpSelectionCache.filter(s => {
-                    return null == selectionCache.find(t => s.id == t.id);  // TODO make function, similar to getRelevantGeoSelection and getSelection
+                    return null == selectionCache.find(t => s.id == t.id);
                 });
 
                 selectionCache = tmpSelectionCache;
@@ -2122,11 +2124,7 @@
                 extractRelevantGeoSelectionsFromSelectionCache();
 
                 setStatus("Successfully restored selection cache from \"" + filename + "\".");
-
-                // forget about the file, allowing the event handler to fire again if the user uploads the same file again
-                document.getElementById("upload-selectioncache").value = "";
-            };
-            reader.readAsText(file);
+            });
         });
 
         function recoverSelectionsFromSelectionCache() {
@@ -2253,9 +2251,10 @@
         // STATUS MESSAGES //
         /////////////////////
 
+        let status = document.querySelector(".status");
+
         // helper function for displaying status messages
         function setStatus(message, persist) {
-            let status = document.querySelector(".status");
             status.innerHTML = message;
             status.classList.remove("hidden");
             if (!persist) {
@@ -2265,7 +2264,6 @@
 
         // helper function for hiding the current status message
         function clearStatus() {
-            let status = document.querySelector(".status");
             status.classList.add("hidden");
         }
 
@@ -2274,8 +2272,9 @@
         // ERROR MESSAGES //
         ////////////////////
 
+        let error = document.querySelector(".error");
+
         function showError(message, label = true) {
-            let error = document.querySelector(".error");
             error.classList.remove("hidden");
             let errorMessage = document.querySelector(".error-message");
             if (label) {
@@ -2285,7 +2284,6 @@
         }
 
         function dismissError() {
-            let error = document.querySelector(".error");
             error.classList.add("hidden");
         }
 
@@ -2315,6 +2313,7 @@
         // IT'S LIGHTS OUT AND AWAY WE GO //
         ////////////////////////////////////
 
+        dpr = 1;
         if (window.devicePixelRatio) {
             dpr = window.devicePixelRatio;
         }
