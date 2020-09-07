@@ -53,8 +53,8 @@
             --another-image-dropper-color: #aaa;
 
             --current-selection-stroke: #fff;
-            --old-selections-stroke: rgba(255,255,255,0.5);
-            --old-selections-fill: rgba(255,255,255,0.2);
+            --selections-stroke: rgba(255,255,255,0.5);
+            --selections-fill: rgba(255,255,255,0.2);
             --highlighted-selection-stroke: rgba(255,255,255,0.8);
             --highlighted-selection-fill: rgba(255,255,255,0.4);
 
@@ -521,7 +521,7 @@
 
         <hr>
 
-        <label><input type="checkbox" class="show-old-selections-checkbox" data-default="yes" onclick="updateShowOldSelections(this);" checked> show old selections TODO rm "old"</label>
+        <label><input type="checkbox" class="show-selections-checkbox" data-default="yes" onclick="updateShowSelections(this);" checked> show selections</label>
         <span>Shows previously selected circles, which is helpful for keeping track of what you've already done.</span>
 
         <label>
@@ -640,10 +640,11 @@
 
         <h2>Configuration</h2>
 
-        The settings in the sidebar... TODO
+        <p>The settings in the sidebar... TODO</p>
 
         <h3 id="ug-filename">Filename</h3>
-        TODO filename:
+
+        <p>TODO filename:
             file: orig filename
             id: internal selection id (unix timestamp + ms of creation)
             date: in iso format
@@ -659,7 +660,7 @@
             lon: analogous
             rm: radius in meters
 
-            default: default template (TODO), useful for prefixing of postfixing
+            default: default template (TODO), useful for prefixing of postfixing</p>
 
         <p>TODO</p>
 
@@ -670,9 +671,9 @@
 
         <p>⦿ TODO keep images below 100 megapixels – things get sluggish fast if you shoot past this limit. then again, i'm using a 5-year-old computer and perhaps not the fastest browser, so ymmv.</p>
 
-        TODO clicking, moving to "resurrect" old selection
+        <p>TODO clicking, moving to "resurrect" old selection</p>
 
-        TODO table usage
+        <p>TODO table usage</p>
 
         <hr>
 
@@ -688,24 +689,15 @@
     <script src="libs/Stuk-jszip-25d401e/dist/jszip.min.js"></script>
     <script>
         // TODO now, implement:
-        // * show or hide pxpy bit in highlighted selection? or old selections in general? also, make highlighted geoselections different from normal ones? generally revisit "circle" styles!
-        // * improve code quality
-        /*
-            i.e.:
-            * keep some references to some important elements globally: droppers (should really be called drop targets anyway), cropped image, etc.
-            * abstract a bit, move some functions around into proper sections, dedup settings/circles backup/restore
-            * generally, use classes and ids more sensibly
-            * simplify table rendering code: just rerender each time? would make things easier. also, explicitly order by id (descending)?
-        */
-        // * clean up position absolute and fixed in css
-        // * finish user's guide, link to it from various settings, etc. take screenshots & record bits of video?
+        // * keep some references to some important elements globally: droppers (should really be called drop targets anyway), cropped image, etc.
+        // * abstract a bit, dedup backup and restore for both settings and selections
+        // * generally, use classes and ids more sensibly
+        // * explicitly order table(s) by id during first load (descending)?
+        // * finish user's guide, link to it from various settings, etc. illustrate it with screenshots & bits of video?
 
         /////////////
         // GLOBALS //
         /////////////
-
-        let precisionHelper = document.getElementById("prec");
-        let work = document.getElementById("work");
 
         let dpr = 1;
         let scale = null;
@@ -729,7 +721,8 @@
             fileid: null
         };
 
-
+        let precisionHelper = document.getElementById("prec");
+        let work = document.getElementById("work");
         let image = document.getElementById("dropped-image");  // TODO rename to droppedImage?
 
 
@@ -806,7 +799,6 @@
         // CANVAS DRAWING //
         ////////////////////
 
-        // TODO could increase contrast https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/filter
         function renderPrecisionHelper() {
             let pc = precisionHelper.getContext("2d");
             let W = precisionHelper.width;
@@ -820,161 +812,93 @@
             pc.strokeStyle = readCssVar("current-selection-stroke");
 
             if (currentSelection) {
-                let x = currentSelection.x;
-                let y = currentSelection.y;
-                let r = currentSelection.r;
 
-                // TODO make this prettier, maybe it's possible to do all 9 cases in a general function like this?
-                function drawImageSquare(xx, yy) {  // x, y from -1, 0, 1
-                    let zoom = 1 / settings.precisionHelperZoom;
-                    let rad = (xx != 0 && yy != 0) ? (r / Math.sqrt(2)) : r;  // corners
-                    pc.drawImage(
-                        image,
-                        x + (xx * rad) - w/6 * zoom,
-                        y + (yy * rad) - h/6 * zoom,
-                        w/3 * zoom,
-                        h/3 * zoom,
-                        (1 + xx) * W/3,
-                        (1 + yy) * H/3,
-                        W/3,
-                        H/3
-                        );
-                }
+                // there's 3x3 squares, each of which receives a different-but-similar treatment. it's possible to express this with two nested loops and a bunch of unintuitive index computation, but if you scroll back through the git history, you'll find a more verbose, imperative variant
+                [-1, 0, 1].forEach(x => {
+                    [-1, 0, 1].forEach(y => {
 
-                // here, logicalCanvastoPhysicalCanvas(r) is correct since the image is show at 1x (modulo zoom) as opposed to being fitted into the viewport
-                let selectionRadius = logicalCanvastoPhysicalCanvas(r) * settings.precisionHelperZoom;
+                        // draw square from images
+                        let r = currentSelection.r;
+                        if (x != 0 && y != 0) {
+                            r /= Math.sqrt(2);
+                        }
+                        pc.drawImage(
+                            image,
+                            currentSelection.x + (x * r) - w/6 / settings.precisionHelperZoom,
+                            currentSelection.y + (y * r) - h/6 / settings.precisionHelperZoom,
+                            w/3 / settings.precisionHelperZoom,
+                            h/3 / settings.precisionHelperZoom,
+                            (1 + x) * W/3,
+                            (1 + y) * H/3,
+                            W/3,
+                            H/3
+                            );
 
-                // center
-                drawImageSquare(0, 0);
-                pc.beginPath();
-                // cross
-                pc.moveTo(W/2-W/18, H/2-H/18);
-                pc.lineTo(W/2-W/72, H/2-H/72);
-                pc.moveTo(W/2+W/72, H/2+H/72);
-                pc.lineTo(W/2+W/18, H/2+H/18);
-                pc.moveTo(W/2+W/18, H/2-H/18);
-                pc.lineTo(W/2+W/72, H/2-H/72);
-                pc.moveTo(W/2-W/72, H/2+H/72);
-                pc.lineTo(W/2-W/18, H/2+H/18);
-                // dot
-                pc.rect(W/2-logicalCanvastoPhysicalCanvas(0.25), H/2-logicalCanvastoPhysicalCanvas(0.25), logicalCanvastoPhysicalCanvas(0.5), logicalCanvastoPhysicalCanvas(0.5));
-                // lines at the edges
-                pc.moveTo(W/2, H/3);
-                pc.lineTo(W/2, H/3+H/18);
-                pc.moveTo(W/2, 2*H/3);
-                pc.lineTo(W/2, 2*H/3-H/18);
-                pc.moveTo(W/3, H/2);
-                pc.lineTo(W/3+W/18, H/2);
-                pc.moveTo(2*W/3, H/2);
-                pc.lineTo(2*W/3-W/18, H/2);
-                pc.stroke();
+                        // draw circle section (or, for the center square, alignment marks)
+                        if (x == 0 && y == 0) {
+                            pc.beginPath();
+                            // cross
+                            pc.moveTo(W/2-W/18, H/2-H/18);
+                            pc.lineTo(W/2-W/54, H/2-H/54);
+                            pc.moveTo(W/2+W/54, H/2+H/54);
+                            pc.lineTo(W/2+W/18, H/2+H/18);
+                            pc.moveTo(W/2+W/18, H/2-H/18);
+                            pc.lineTo(W/2+W/54, H/2-H/54);
+                            pc.moveTo(W/2-W/54, H/2+H/54);
+                            pc.lineTo(W/2-W/18, H/2+H/18);
+                            // dot
+                            let dotRadius = logicalCanvastoPhysicalCanvas(1);
+                            pc.rect(W/2-dotRadius/2, H/2-dotRadius/2, dotRadius, dotRadius);
+                            // lines at the edges
+                            pc.moveTo(W/2, H/3);
+                            pc.lineTo(W/2, H/3+H/18);
+                            pc.moveTo(W/2, 2*H/3);
+                            pc.lineTo(W/2, 2*H/3-H/18);
+                            pc.moveTo(W/3, H/2);
+                            pc.lineTo(W/3+W/18, H/2);
+                            pc.moveTo(2*W/3, H/2);
+                            pc.lineTo(2*W/3-W/18, H/2);
+                            pc.stroke();
+                        } else {
+                            // here, logicalCanvastoPhysicalCanvas(r) is correct since the image is show at 1x (modulo zoom) as opposed to being fitted into the viewport
+                            let radius = logicalCanvastoPhysicalCanvas(currentSelection.r) * settings.precisionHelperZoom;
+                            r = radius;
+                            if (x != 0 && y != 0) {
+                                r /= Math.sqrt(2);
+                            }
 
-                // top
-                drawImageSquare(0, -1);
-                pc.save();
-                pc.beginPath();
-                pc.rect(W/3, 0, W/3, H/3);
-                pc.closePath();
-                pc.clip();
-                pc.beginPath();
-                pc.arc(W/2, H/6 + selectionRadius, selectionRadius, 0, 2 * Math.PI);
-                pc.stroke();
-                pc.restore();
-
-                // bottom
-                drawImageSquare(0, 1);
-                pc.save();
-                pc.beginPath();
-                pc.rect(W/3, 2*H/3, W/3, H/3);
-                pc.closePath();
-                pc.clip();
-                pc.beginPath();
-                pc.arc(W/2, 5*H/6 - selectionRadius, selectionRadius, 0, 2 * Math.PI);
-                pc.stroke();
-                pc.restore();
-
-                // left
-                drawImageSquare(-1, 0);
-                pc.save();
-                pc.beginPath();
-                pc.rect(0, H/3, W/3, H/3);
-                pc.closePath();
-                pc.clip();
-                pc.beginPath();
-                pc.arc(W/6 + selectionRadius, H/2, selectionRadius, 0, 2 * Math.PI);
-                pc.stroke();
-                pc.restore();
-
-                // right
-                drawImageSquare(1, 0);
-                pc.save();
-                pc.beginPath();
-                pc.rect(2*W/3, H/3, W/3, H/3);
-                pc.closePath();
-                pc.clip();
-                pc.beginPath();
-                pc.arc(5*W/6 - selectionRadius, H/2, selectionRadius, 0, 2 * Math.PI);
-                pc.stroke();
-                pc.restore();
-
-                // top left
-                drawImageSquare(-1, -1);
-                pc.save();
-                pc.beginPath();
-                pc.rect(0, 0, W/3, H/3);
-                pc.closePath();
-                pc.clip();
-                pc.beginPath();
-                pc.arc(W/6 + selectionRadius / Math.sqrt(2), H/6 + selectionRadius / Math.sqrt(2), selectionRadius, 0, 2 * Math.PI);
-                pc.stroke();
-                pc.restore();
-
-                // top right
-                drawImageSquare(1, -1);
-                pc.save();
-                pc.beginPath();
-                pc.rect(2*W/3, 0, W/3, H/3);
-                pc.closePath();
-                pc.clip();
-                pc.beginPath();
-                pc.arc(5*W/6 - selectionRadius / Math.sqrt(2), H/6 + selectionRadius / Math.sqrt(2), selectionRadius, 0, 2 * Math.PI);
-                pc.stroke();
-                pc.restore();
-
-                // bottom left
-                drawImageSquare(-1, 1);
-                pc.save();
-                pc.beginPath();
-                pc.rect(0, 2*H/3, W/3, H/3);
-                pc.closePath();
-                pc.clip();
-                pc.beginPath();
-                pc.arc(W/6 + selectionRadius / Math.sqrt(2), 5*H/6 - selectionRadius / Math.sqrt(2), selectionRadius, 0, 2 * Math.PI);
-                pc.stroke();
-                pc.restore();
-
-                // bottom right
-                drawImageSquare(1, 1);
-                pc.save();
-                pc.beginPath();
-                pc.rect(2*W/3, 2*H/3, W/3, H/3);
-                pc.closePath();
-                pc.clip();
-                pc.beginPath();
-                pc.arc(5*W/6 - selectionRadius / Math.sqrt(2), 5*H/6 - selectionRadius / Math.sqrt(2), selectionRadius, 0, 2 * Math.PI);
-                pc.stroke();
-                pc.restore();
+                            pc.save();
+                            pc.beginPath();
+                            pc.rect(
+                                (1 + x) * W/3,
+                                (1 + y) * H/3,
+                                W/3,
+                                H/3);
+                            pc.closePath();
+                            pc.clip();
+                            pc.beginPath();
+                            pc.arc(
+                                W/2 + x * (W/3 - r),
+                                H/2 + y * (H/3 - r),
+                                radius,
+                                0,
+                                2 * Math.PI
+                                );
+                            pc.stroke();
+                            pc.restore();
+                        }
+                    });
+                });
             }
 
+            // borders: two on each axis
             pc.beginPath();
-            pc.moveTo(W/3, 0);
-            pc.lineTo(W/3, H);
-            pc.moveTo(2*W/3, 0);
-            pc.lineTo(2*W/3, H);
-            pc.moveTo(0, H/3);
-            pc.lineTo(W, H/3);
-            pc.moveTo(0, 2*H/3);
-            pc.lineTo(W, 2*H/3);
+            [1, 2].forEach(n => {
+                pc.moveTo(n*W/3, 0);
+                pc.lineTo(n*W/3, H);
+                pc.moveTo(0, n*H/3);
+                pc.lineTo(W, n*H/3);
+            });
             pc.lineWidth = logicalCanvastoPhysicalCanvas(2);
             pc.strokeStyle = readCssVar("precision-helper-dividers-stroke");
             pc.stroke();
@@ -983,70 +907,84 @@
         function renderWork() {
             let wc = work.getContext("2d");
 
+            let setLineDash = (on, off) => {
+                if (!on) {
+                    wc.setLineDash([]);
+                } else {
+                    wc.setLineDash([logicalCanvastoPhysicalCanvas(on), logicalCanvastoPhysicalCanvas(off)]);
+                }
+            }
+            let drawSelectionCircle = s => {
+                wc.arc(imageToPhysicalCanvas(s.x), imageToPhysicalCanvas(s.y), imageToPhysicalCanvas(s.r), 0, 2 * Math.PI);
+            };
+            let drawSelectionRadius = s => {
+                wc.moveTo(imageToPhysicalCanvas(s.x), imageToPhysicalCanvas(s.y));
+                wc.lineTo(imageToPhysicalCanvas(s.px), imageToPhysicalCanvas(s.py));
+            }
+            let drawSelectionMargins = s => {
+                wc.rect(
+                    imageToPhysicalCanvas(s.x - (settings.horizontalMargin + 1) * s.r),
+                    imageToPhysicalCanvas(s.y - (settings.verticalMargin + 1) * s.r),
+                    imageToPhysicalCanvas((2 * settings.horizontalMargin + 2) * s.r),
+                    imageToPhysicalCanvas((2 * settings.verticalMargin + 2) * s.r)
+                    );
+            }
+
             wc.clearRect(0, 0, work.width, work.height);
             wc.lineWidth = logicalCanvastoPhysicalCanvas(1);
 
             if (currentSelection) {
                 wc.strokeStyle = readCssVar("current-selection-stroke");
 
+                setLineDash(6, 4);
                 wc.beginPath();
-                wc.setLineDash([logicalCanvastoPhysicalCanvas(6), logicalCanvastoPhysicalCanvas(4)]);
-                wc.arc(imageToPhysicalCanvas(currentSelection.x), imageToPhysicalCanvas(currentSelection.y), imageToPhysicalCanvas(currentSelection.r), 0, 2 * Math.PI);
-                wc.moveTo(imageToPhysicalCanvas(currentSelection.x), imageToPhysicalCanvas(currentSelection.y));
-                wc.lineTo(imageToPhysicalCanvas(currentSelection.px), imageToPhysicalCanvas(currentSelection.py));
+                drawSelectionCircle(currentSelection);
+                drawSelectionRadius(currentSelection);
                 wc.stroke();
-                wc.setLineDash([]);
+                setLineDash();
 
                 if (!settings.transparentBackground) {
+                    setLineDash(2, 4);
                     wc.beginPath();
-                    wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(4)]);
-                    wc.rect(
-                        imageToPhysicalCanvas(currentSelection.x - (settings.horizontalMargin + 1) * currentSelection.r),
-                        imageToPhysicalCanvas(currentSelection.y - (settings.verticalMargin + 1) * currentSelection.r),
-                        imageToPhysicalCanvas((2 * settings.horizontalMargin + 2) * currentSelection.r),
-                        imageToPhysicalCanvas((2 * settings.verticalMargin + 2) * currentSelection.r)
-                        );
+                    drawSelectionMargins(currentSelection);
                     wc.stroke();
-                    wc.setLineDash([]);
+                    setLineDash();
                 }
             }
 
-            if (settings.showOldSelections) {
-                wc.strokeStyle = readCssVar("old-selections-stroke");
-                wc.fillStyle = readCssVar("old-selections-fill");
-                selections.forEach(sel => {
+            if (settings.showSelections) {
+                wc.strokeStyle = readCssVar("selections-stroke");
+                wc.fillStyle = readCssVar("selections-fill");
 
-                    // don't yet draw the highlighted one
-                    if (sel.id != highlightedSelectionId) {
-                        wc.beginPath();
-                        wc.arc(imageToPhysicalCanvas(sel.x), imageToPhysicalCanvas(sel.y), imageToPhysicalCanvas(sel.r), 0, 2 * Math.PI);
-                        wc.fill();
-                        wc.stroke();
-                    }
+                // don't yet draw the highlighted one
+                selections.filter(s => s.id != highlightedSelectionId).forEach(sel => {
+                    wc.beginPath();
+                    drawSelectionCircle(sel);
+                    wc.fill();
+                    wc.stroke();
                 });
 
                 // show relevant geo selections from other images
-                wc.strokeStyle = readCssVar("old-selections-stroke");
+                wc.strokeStyle = readCssVar("selections-stroke");
                 wc.fillStyle = "transparent";
-                wc.setLineDash([logicalCanvastoPhysicalCanvas(3), logicalCanvastoPhysicalCanvas(6)]);
-                relevantGeoSelections.forEach(sel => {
-                    if (sel.id != highlightedSelectionId) {
-                        wc.beginPath();
-                        wc.arc(imageToPhysicalCanvas(sel.x), imageToPhysicalCanvas(sel.y), imageToPhysicalCanvas(sel.r), 0, 2 * Math.PI);
-                        wc.fill();
-                        wc.stroke();
-                    }
+                setLineDash(3, 6);
+                relevantGeoSelections.filter(s => s.id != highlightedSelectionId).forEach(sel => {
+                    wc.beginPath();
+                    drawSelectionCircle(sel);
+                    wc.fill();
+                    wc.stroke();
                 });
-                wc.setLineDash([]);
+                setLineDash();
             }
 
             if (highlightedSelectionId) {
                 let sel = getSelection(highlightedSelectionId);
 
                 // try geo selections
-                // TODO different style for these?
+                let isGeo = false;
                 if (!sel) {
                     sel = getRelevantGeoSelection(highlightedSelectionId);
+                    isGeo = true;
                 }
 
                 // note: it's possible for there to not be a selection for the passed id iff the user has just deleted a selection through the table in the sidebar – before the table row disappears, the mouseover event is fired at least one more time, calling this function, hence we need to check if there's actually a selection
@@ -1054,26 +992,22 @@
                     wc.strokeStyle = readCssVar("highlighted-selection-stroke");
                     wc.fillStyle = readCssVar("highlighted-selection-fill");
 
-                    // TODO deduplicate with sel drawing code above
+                    if (isGeo) {
+                        setLineDash(3, 6);
+                    }
                     wc.beginPath();
-                    wc.arc(imageToPhysicalCanvas(sel.x), imageToPhysicalCanvas(sel.y), imageToPhysicalCanvas(sel.r), 0, 2 * Math.PI);
-                    wc.moveTo(imageToPhysicalCanvas(sel.x), imageToPhysicalCanvas(sel.y));
-                    wc.lineTo(imageToPhysicalCanvas(sel.px), imageToPhysicalCanvas(sel.py));
+                    drawSelectionCircle(sel);
+                    //drawSelectionRadius(sel);
                     wc.fill();
                     wc.stroke();
+                    setLineDash();
 
-                    // TODO deduplicate with rectangle drawing code above
                     if (!settings.transparentBackground) {
                         wc.beginPath();
-                        wc.setLineDash([logicalCanvastoPhysicalCanvas(2), logicalCanvastoPhysicalCanvas(3)]);
-                        wc.rect(
-                            imageToPhysicalCanvas(sel.x - (settings.horizontalMargin + 1) * sel.r),
-                            imageToPhysicalCanvas(sel.y - (settings.verticalMargin + 1) * sel.r),
-                            imageToPhysicalCanvas((2 * settings.horizontalMargin + 2) * sel.r),
-                            imageToPhysicalCanvas((2 * settings.verticalMargin + 2) * sel.r)
-                            );
+                        setLineDash(2, 4);
+                        drawSelectionMargins(sel);
                         wc.stroke();
-                        wc.setLineDash([]);
+                        setLineDash();
                     }
                 }
             }
@@ -1164,17 +1098,18 @@
         // IMAGE (RE)LOADING //
         ///////////////////////
 
-        document.querySelector('.dropper').addEventListener('dragover', e => {
+        let dropper = document.querySelector('.dropper');
+        dropper.addEventListener('dragover', e => {
             e.preventDefault();
-            document.querySelector('.dropper').classList.add("active");
+            dropper.classList.add("active");
         });
-        document.querySelector('.dropper').addEventListener('dragleave', e => {
+        dropper.addEventListener('dragleave', e => {
             e.preventDefault();
-            document.querySelector('.dropper').classList.remove("active");
+            dropper.classList.remove("active");
         });
-        document.querySelector('.dropper').addEventListener('drop', e => {
+        dropper.addEventListener('drop', e => {
             dropImage(e);
-            document.querySelector('.dropper').classList.remove("active");
+            dropper.classList.remove("active");
         });
         document.querySelector('.drop-or-select').addEventListener('click', e => {
             e.preventDefault();
@@ -1182,21 +1117,21 @@
         });
         document.getElementById("upload-image").addEventListener('change', pickImage);
 
-        document.querySelector('.another-image-dropper').addEventListener('dragover', e => {
+        let anotherImageDropper = document.querySelector('.another-image-dropper');
+        anotherImageDropper.addEventListener('dragover', e => {
             e.preventDefault();
-            document.querySelector('.another-image-dropper').classList.add("active");
+            anotherImageDropper.classList.add("active");
         });
-        document.querySelector('.another-image-dropper').addEventListener('dragleave', e => {
+        anotherImageDropper.addEventListener('dragleave', e => {
             e.preventDefault();
-            document.querySelector('.another-image-dropper').classList.remove("active");
+            anotherImageDropper.classList.remove("active");
         });
-        document.querySelector('.another-image-dropper').addEventListener('drop', e => {
+        anotherImageDropper.addEventListener('drop', e => {
             dropImage(e);
-            document.querySelector('.another-image-dropper').classList.remove("active");
+            anotherImageDropper.classList.remove("active");
         });
-        document.querySelector('.another-image-dropper').addEventListener('click', e => {
+        anotherImageDropper.addEventListener('click', e => {
             e.preventDefault();
-            console.log(e);
             document.getElementById("upload-another-image").click();
         });
         document.getElementById("upload-another-image").addEventListener('change', pickImage);
@@ -1206,7 +1141,6 @@
             setStatus("Setting up image…", true);
 
             let files = e.dataTransfer.files;
-            console.log(files);
             if (files.length == 1) {
 
                 // TODO deduplicate this with button-press-way of adding a file
@@ -1295,9 +1229,10 @@
             let scaleY = work.height / image.height;
             scale = Math.min(scaleX, scaleY);
 
-            document.getElementById("base-image").setAttribute("src", image.src);
-            document.getElementById("base-image").setAttribute("width", imageToLogicalCanvas(image.width))
-            document.getElementById("base-image").setAttribute("height", imageToLogicalCanvas(image.height));
+            let baseImage = document.getElementById("base-image");
+            baseImage.setAttribute("src", image.src);
+            baseImage.setAttribute("width", imageToLogicalCanvas(image.width))
+            baseImage.setAttribute("height", imageToLogicalCanvas(image.height));
 
             renderWork();
         }
@@ -1425,7 +1360,7 @@
         function deleteSelection(id) {
             selections = selections.filter(s => s.id != id);
             removeFromSelectionCache(id);
-            document.getElementById(id + "").remove();
+            tableRowFor(id).remove();
             extractRelevantGeoSelectionsFromSelectionCache();
             renderWork();
 
@@ -1504,12 +1439,12 @@
         // TODO comment: circle hover => highlight
         work.addEventListener('mousemove', event => {
 
-            if (!settings.showOldSelections || currentlySelecting) {
+            if (!settings.showSelections || currentlySelecting) {
 
                 // clear any previous highlights
                 highlightedSelectionId = null;
-                selections.forEach(s => document.getElementById(s.id).classList.remove("hover"));
-                relevantGeoSelections.forEach(s => document.getElementById(s.id).classList.remove("hover"));
+                selections.forEach(s => tableRowFor(s.id).classList.remove("hover"));
+                relevantGeoSelections.forEach(s => tableRowFor(id.s).classList.remove("hover"));
                 return;
             }
 
@@ -1522,8 +1457,8 @@
             });
 
             highlightedSelectionId = null;
-            selections.forEach(s => document.getElementById(s.id).classList.remove("hover"));
-            relevantGeoSelections.forEach(s => document.getElementById(s.id).classList.remove("hover"));
+            selections.forEach(s => tableRowFor(s.id).classList.remove("hover"));
+            relevantGeoSelections.forEach(s => tableRowFor(s.id).classList.remove("hover"));
 
             if (candidates.length > 0) {
                 let rMin = 999999999;
@@ -1536,7 +1471,7 @@
                     }
                 });
 
-                document.getElementById(id).classList.add("hover");
+                tableRowFor(id).classList.add("hover");
                 highlightedSelectionId = id;
             }
             renderWork();
@@ -1587,13 +1522,6 @@
             updateDownloadButtonAndTablePlaceholder();
         }
 
-        function clearTable() {
-            let table = document.getElementById("selections-table-body");
-            table.innerHTML = "";
-
-            updateDownloadButtonAndTablePlaceholder();
-        }
-
         function renderRelevantGeoSelectionsTable() {
             if (relevantGeoSelections.length > 0) {
                 document.querySelector(".selections-table-container").classList.remove("hidden");
@@ -1630,6 +1558,18 @@
             });
         }
 
+        function clearTable() {
+            let table = document.getElementById("selections-table-body");
+            table.innerHTML = "";
+
+            updateDownloadButtonAndTablePlaceholder();
+        }
+
+        function tableRowFor(id) {
+            return document.getElementById(id);
+        }
+
+        // TODO make this prettier
         function updateDownloadButtonAndTablePlaceholder() {
             document.getElementById("selection-count").innerText = selections.length;
 
@@ -1913,7 +1853,7 @@
         //////////////
 
         let settings = {
-            showOldSelections: null,
+            showSelections: null,
             precisionHelperZoom: null,
             downloadImmediately: null,
             filenameTemplate: null,
@@ -1922,7 +1862,7 @@
             horizontalMargin: null
         }
 
-        let showOldSelectionsCheckbox = document.querySelector(".show-old-selections-checkbox");
+        let showSelectionsCheckbox = document.querySelector(".show-selections-checkbox");
         let precisionHelperZoomSlider = document.querySelector(".precision-helper-zoom-slider");
         let downloadImmediatelyCheckbox = document.querySelector(".download-immediately-checkbox");
         let filenameTemplateField = document.querySelector(".filename-template-field");
@@ -1940,15 +1880,15 @@
                 }
                 settings = JSON.parse(s);
             } catch (e) {
-                resetSettingsToDefaults();
+                resetSettingsToDefaults(true);
             }
         }
 
-        function applySettingsView() {  // TODO rename?
+        function applySettings() {
 
             // adjust dom to match settings
-            showOldSelectionsCheckbox.checked = settings.showOldSelections;
-            updateShowOldSelections(showOldSelectionsCheckbox);
+            showSelectionsCheckbox.checked = settings.showSelections;
+            updateShowSelections(showSelectionsCheckbox);
 
             precisionHelperZoomSlider.value = settings.precisionHelperZoom;
             adjustPrecisionHelperZoom(precisionHelperZoomSlider);
@@ -1971,7 +1911,7 @@
 
         function setupSettings() {
             initSettingsFromLocalStorage();
-            applySettingsView();
+            applySettings();
         }
 
         function writeSettingsToLocalStorage() {
@@ -2010,7 +1950,7 @@
                         return;
                     }
                     settings = rawSettings.settings;
-                    applySettingsView();
+                    applySettings();
                     setStatus("Successfully restored settings from \"" + filename + "\".")
 
                     // forget about the file, allowing the event handler to fire again if the user uploads the same file again
@@ -2022,9 +1962,9 @@
             reader.readAsText(file);
         });
 
-        function resetSettingsToDefaults() {
-            showOldSelectionsCheckbox.checked = showOldSelectionsCheckbox.getAttribute("data-default") == "yes";
-            updateShowOldSelections(showOldSelectionsCheckbox);
+        function resetSettingsToDefaults(quietly = false) {
+            showSelectionsCheckbox.checked = showSelectionsCheckbox.getAttribute("data-default") == "yes";
+            updateShowSelections(showSelectionsCheckbox);
             precisionHelperZoomSlider.value = precisionHelperZoomSlider.getAttribute("data-default");
             adjustPrecisionHelperZoom(precisionHelperZoomSlider);
             downloadImmediatelyCheckbox.checked = downloadImmediatelyCheckbox.getAttribute("data-default") == "yes";
@@ -2039,11 +1979,13 @@
             horizontalMarginSlider.value = horizontalMarginSlider.getAttribute("data-default");
             adjustHorizontalMargin(horizontalMarginSlider);
 
-            setStatus("Successfully reset the settings to their default values.")
+            if (!quietly) {
+                setStatus("Successfully reset the settings to their default values.");
+            }
         }
 
-        function updateShowOldSelections(checkbox) {
-            settings.showOldSelections = !!checkbox.checked;
+        function updateShowSelections(checkbox) {
+            settings.showSelections = !!checkbox.checked;
             writeSettingsToLocalStorage();
             renderWork();
         }
@@ -2128,7 +2070,7 @@
                 }
                 selectionCache = JSON.parse(s);
             } catch (e) {
-                purgeSelectionCache();
+                purgeSelectionCache(true);
             }
         }
 
@@ -2263,7 +2205,7 @@
         }
 
         // reset to only include the current selections
-        function purgeSelectionCache() {
+        function purgeSelectionCache(quietly = false) {
             selectionCache = selections;
             writeSelectionCacheToLocalStorage();
 
@@ -2271,7 +2213,9 @@
             extractRelevantGeoSelectionsFromSelectionCache();
             renderWork();
 
-            setStatus("Successfully purged the selection cache – only your current selections remain.")
+            if (!quietly) {
+                setStatus("Successfully purged the selection cache – only your current selections remain.");
+            }
         }
 
         function getRelevantGeoSelection(id) {
