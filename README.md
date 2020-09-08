@@ -4,7 +4,7 @@
 
 <em>Crop Circles</em> is a [web app](https://doersino.github.io/cropcircles/) originally designed for **cropping circular [center pivot irrigation](https://en.wikipedia.org/wiki/Center_pivot_irrigation) fields from aerial imagery** collected with [ærialbot](https://github.com/doersino/aerialbot). *But nothing's keeping you from using it to **crop circular objects from imagery-in-a-more-general-sense**!*
 
-#### Try it out here: https://doersino.github.io/cropcircles/
+### Try it out here: https://doersino.github.io/cropcircles/
 
 For (many) more details, **refer to the user's guide** – you can access it through the "Learn more..." link within the web app.
 
