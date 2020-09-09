@@ -344,6 +344,26 @@
         .users-guide .separator + h3 {
             margin-top: 1rem;
         }
+        .users-guide table {
+            border-spacing: 0;
+        }
+        .users-guide tr:first-child td {
+            padding-top: 0;
+        }
+        .users-guide tr:last-child td {
+            padding-bottom: 0;
+        }
+        .users-guide td {
+            vertical-align: top;
+            padding: 0.5em;
+        }
+        .users-guide table td:first-child {
+            padding-left: 0;
+            border-right: 1px solid var(--rule-color);
+        }
+        .users-guide table td:last-child {
+            padding-right: 0;
+        }
 
         /* PRECISION HELPER */
         .precision-helper {
@@ -649,7 +669,7 @@
 
     <section class="users-guide">
         <a href="javascript:hideUsersGuide();" class="hide">×</a>
-        <p class="hero"><a href="https://github.com/doersino/cropcircles"><em>Crop Circles</em></a> is a tool originally designed for cropping circular <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery collected with <a href="https://github.com/doersino/aerialbot">ærialbot</a> or similar tools.</p>
+        <p class="hero"><a href="https://github.com/doersino/cropcircles"><em>Crop Circles</em></a> is a tool originally designed for cropping circular <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery collected with, for example, <a href="https://github.com/doersino/aerialbot">ærialbot</a>.</p>
         <p>It's an unabashedly-built-for-<a href="https://noahdoersing.com">myself</a> tool, with precisely the knobs and toggles I thought would enable me to fine-tune my workflow during the creation of a <a href="TODO link">series of videos</a> like the one below.</p>
 
         <video controls loop poster="assets/video-poster-sample-sw42.286577541476696,-113.90409924217032ne42.340476458523305,-113.80691475782969.jpg">
@@ -689,31 +709,95 @@
         <p>The settings in the sidebar are tersely explained in-place. Here's some more words about them.</p>
 
         <h3>Show old selections</h3>
-        If enabled (which is the default), your previously selected circles, which is helpful for keeping track of what you've already done.
+        <p>If enabled (which is the default), your previously selected circles, which is helpful for keeping track of what you've already done.</p>
+
+        <h3>Precision helper zoom</h3>
+        <p>Adjusts the zoom level of the thumbnails shown in the precision helper in the bottom right. At 1×, the image pixels will be shown at original scale with regard to <em>logical</em> browser pixels – on a high-dpi or retina device, they will thus be scaled up with regard to <em>physical</em> pixels. This is by design.</p>
+
+        <h3>Download immediately</h3>
+        <p>Uncheck this checkbox if you prefer downloading your images through the selection table after first making a bunch of selections.</p>
 
         <h3 id="ug-filename">Filename</h3>
 
-        <p>TODO filename:
-            file: orig filename
-            id: internal selection id (unix timestamp + ms of creation)
-            date: in iso format
-            rand: random number btwn 0 and 1
-            x: x coord of circle center in image
-            y: analogous
-            r: radius in px
+        <p>You can set the filenames TODO these names will of course also be used within zips. default is TODO</p>
 
-            if geodata:
+        <table>
+            <tr>
+                <td>{default}</td>
+                <td>The default filename. Handy if all you want to change is adding a prefix or postfix.</td>
+            </tr>
+            <tr>
+                <td>{file}</td>
+                <td>Filename of the image the selection was made in.</td>
+            </tr>
+            <tr>
+                <td>{id}</td>
+                <td>Internal selection identifier, actually the millisecond-precision UNIX timestamp at which the selection was made, e.g. TODO.</td>
+            </tr>
+            <tr>
+                <td>{date}</td>
+                <td>The current date at the time of download, in TODO ISO format, e.g. TODO.</td>
+            </tr>
+            <tr>
+                <td>{rand}</td>
+                <td>Random floating-point number between 0 and 1. TODO</td>
+            </tr>
+            <tr>
+                <td>{x}</td>
+                <td>x coordinate, in pixels, of the selection center with respect to the top left corner of the image.</td>
+            </tr>
+            <tr>
+                <td>{y}</td>
+                <td>Analogous.</td>
+            </tr>
+            <tr>
+                <td>{r}</td>
+                <td>Radius of the circular selections, in pixels.</td>
+            </tr>
+        </table>
 
-            georect: georect of input image
-            lat: lat of center of circle (assuming web mercator, etc.)
-            lon: analogous
-            rm: radius in meters
+        <p>TODO if geo data, the following too</p>
 
-            default: default template (TODO), useful for prefixing of postfixing</p>
+        <table>
+            <tr>
+                <td>{georect}</td>
+                <td>TODO georect of input image</td>
+            </tr>
+            <tr>
+                <td>{lat}</td>
+                <td>TODO lat of center of circle (assuming web mercator, etc.)</td>
+            </tr>
+            <tr>
+                <td>{lon}</td>
+                <td>Analogous.</td>
+            </tr>
+            <tr>
+                <td>{rm}</td>
+                <td>Radius in meters. TODO depends on lat!</td>
+            </tr>
+        </table>
 
-        <p>TODO</p>
+        <h3>Transparent background</h3>
+        <p>If you leave this checkbox enabled, downloading your selections will yield PNG images with transparent corners: anything outside the bounds of the circular selections will be removed (like each of the three farms in-between the sections of this user's guide).</p>
+        <p>On the other hand, if you choose to uncheck this checkbox, the surroundings of the circular selections will be visible in the corners of the final images – essentially, this turns the selection into a rectangle. This comes in handy for making a video like the one at the top of this user's guide, where different circular objects are shown in one place, with mainly their surroundings changing.</p>
+        <p>Since this removes the need for transparency, the images are downloaded as more space-efficient JPG files. The encoding quality is set at 100%, making this effectively as lossless as PNG.</p>
+
+        TODO adds box around current and highlighted selections
+
+        <h3>Vertical margin</h3>
+        <p>If you increase this slider from its default of 0, a vertical margin whose size you can set as a fraction of the selection radius is added above and below the circular core of the selection.</p>
+
+        <h3>Horizontal margin</h3>
+        <p>Analogous to the vertical margin, but towards the left and right.</p>
+        <p>Together, these two sliders allow you to dial in the range of surroundings to include in the images. For the video at the top, the vertical margin was set to 0.2 and the horizontal margin to 1.8, yielding an aspect ratio (as shown below the two sliders) of 1:2.33 (i.e. <a href="https://en.wikipedia.org/wiki/CinemaScope">cinemascope</a>!).</p>
+
+        TODO https://en.wikipedia.org/wiki/21:9_aspect_ratio (also use in aspect ratio pretty-printer)
 
         <p class="separator"></p>
+
+        <h2>Settings & Selection Backup & Restore</h2>
+
+        <p>TODO</p>
 
         <h2>Selection cache</h2>
 
@@ -730,6 +814,8 @@
 
         <p>— Keep the images you "upload" below 50 megapixels – things get sluggish fast if you shoot past this limit. Then again, I've developed and tested this tool using a 5-year-old laptop, so your mileage may vary.</p>
 
+        <p>TODO ZIP filename: based on image filename</p>
+
         <p>TODO clicking, moving to "resurrect" old selection</p>
 
         <p>TODO table usage</p>
@@ -744,12 +830,17 @@
         <p class="separator"></p>
 
         <h2>Credit</h2>
-        <p>Building this tool would have been more difficult than it turned out to be if it wasn't for the work of others, including but not limited to the following:</p>
-        <p>— The typeface used throughout the tool is <em>Iosevka Aile</em> by Belleve Invis https://github.com/be5invis/Iosevka/blob/master/LICENSE.md</p>
-        <p>— Zipping is done with TODO jszip</p>
-        <p>— TODO inspo project</p>
-        <p>— TODO mddb as base for sidebar</p>
-        <p>— TODO smaple image from google maps at https://www.google.com/maps/place/42°18'48.7%22N+113°51'19.8%22W/@42.3135278,-113.8576887,6000m/ and dl'd with aerialbot, logo at https://www.google.com/maps/place/43°37'03.8%22N+113°24'21.7%22W/@43.6154232,-113.4144375,2892m/</p>
+        <p>Building this tool would have been more difficult than it turned out to be if it wasn't for the work of others, including but not limited to the following.</p>
+        <p>— The typeface used in the tool is <a href="https://github.com/be5invis/Iosevka/"><em>Iosevka Aile</em> by Belleve Invis</a>. It is licensed under the <em>SIL Open Font License Version 1.1</em>, see <a href="https://github.com/be5invis/Iosevka/blob/master/LICENSE.md">here</a>.</p>
+        <p>— Zipping is done with <a href="https://github.com/Stuk/jszip/">JSZip</a> in accordance with its <em>MIT License</em>, see <a href="https://github.com/Stuk/jszip/blob/master/LICENSE.markdown">here</a>.</p>
+        <p>— The general layout has been adapted from <a href="https://github.com/doersino/markdeep-diagram-drafting-board">Markdeep Diagram Drafting Board</a>, a previous project of mine.</p>
+        <p>— The source code of Craciun Cezar's <a href="https://github.com/craciuncezar/Simple-web-image-editor">Simple Web Image Editor</a> was referenced during the implementation of some key features.</p>
+        <p>— The sample image, from which all of the examples in this user's guide have been derived, has been downloaded from <a href="https://www.google.com/maps/place/42°18'48.7%22N+113°51'19.8%22W/@42.3135278,-113.8576887,6000m/">Google Maps</a> using <a href="https://github.com/doersino/aerialbot">ærialbot</a>.</p>
+        <p>— The same <a href="https://www.google.com/maps/place/43°37'03.8%22N+113°24'21.7%22W/@43.6154232,-113.4144375,2892m/">goes</a> for the logo background image, which has additionally been edited and optimized with Adobe Photoshop CS6.</p>
+        <p>— All of the code was written in Sublime Text, and testing was primarily carried out in Safari on macOS Mojave.</p>
+        <p>— Black Lives Matter. (That's not as unrelated as you might think: Black slaves were forced to do farm work, which enriched white land owners, many of which surely later used portions of that money to install the center pivot irrigation systems this tool was inspired by.)</p>
+
+        <img src="assets/readme-collage-1.jpg">
     </section>
     </section>
 

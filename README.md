@@ -11,7 +11,7 @@ Among other adjectives, it is...
 * *simple* – You can get started right away.
 * *yet highly configurable* – Both the tool's behavior and the shape of the end results can be tweaked.
 * *fast* – About as fast as an in-browser tool of its kind can reasonably be, anyway.
-* *robust* – You can export and restore your settings and selections, which are also kept in [local storage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage).
+* *robust* – You can **export and restore your settings and selections**, which are also kept in [local storage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage).
 * *well-documented* – Read the next sentence for more info.
 
 *For more details, **refer to the user's guide** – you can access it through the "Learn more..." link within the web app.*
@@ -44,7 +44,7 @@ You may use this repository's contents under the terms of the *MIT License*, see
 
 However, the subdirectory `assets/` contains **third-party software with its own licenses**:
 
-* **Iosevka Aile**, the font used throughout the interface, is licensed under the *SIL Open Font License Version 1.1*, see [here](https://github.com/be5invis/Iosevka/blob/master/LICENSE.md).
+* **Iosevka Aile**, the typeface used throughout the interface, is licensed under the *SIL Open Font License Version 1.1*, see [here](https://github.com/be5invis/Iosevka/blob/master/LICENSE.md).
 * **JSZip** is used in accordance with its *MIT License*, see [here](https://github.com/Stuk/jszip/blob/master/LICENSE.markdown).
 
 The **remaining files in `assets/` have been downloaded from Google Maps** with [ærialbot](https://github.com/doersino/aerialbot) (or, in some cases, derived from such downloads). Even though that's techically [freebooting](http://www.hellointernet.fm/podcast/5), I've written about why I think it's no big deal [here](https://github.com/doersino/aerialbot#does-this-violate-googles-terms-of-use). The filenames contain clues as to the locations depicted (except for the favicon, all are from the area shown in the sample image).
