@@ -325,7 +325,7 @@
         }
         .users-guide .separator img {
             width: 2.5em;
-            margin: 0 0.25em;
+            margin: 0 0.2em;
         }
         h2 {
             font-weight: bold;
@@ -363,6 +363,25 @@
         }
         .users-guide table td:last-child {
             padding-right: 0;
+        }
+        .users-guide ol {
+            margin-left: 1.82em;
+        }
+        .users-guide ol > li {
+            margin: 1em 0;
+        }
+        .users-guide ul {
+            margin: 0;
+            list-style-type: none;
+            padding-left: 1.9em;
+        }
+        .users-guide ul > li {
+            text-indent: -1.82em;
+            margin: 1em 0;
+        }
+        .users-guide ul > li:before {
+            content: "—\a0\a0";
+            text-indent: -2em;
         }
 
         /* PRECISION HELPER */
@@ -682,25 +701,120 @@
         <p class="separator"></p>
 
         <h2>Basic Usage</h2>
-        <p>1. Drop an image into the main area.</p>
-        <p>2. Click and drag from a center point to make a circular selection.
-        <p>3. Keeping an eye on the precision helper in the bottom right, adjust the selection with the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> (or with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>); you can increase or decrease the size of your selection with <kbd>+</kbd> <kbd>-</kbd> (or <kbd>P</kbd> <kbd>O</kbd>). Press <kbd>shift</kbd> to adjust in 20× larger increments.</p>
-        <p>4. When satisfied, press <kbd>enter</kbd> to accept the selection – it will then download as a PNG image, tightly cropped around the x and y bounds of the circular selection, with transparent corners. (If you wish to cancel the current selection, press <kbd>esc</kbd>.)</p>
-        <p>5. Repeat steps 2 through 4 for as many circles as you'd like to select.</p>
+        <ol>
+            <li>Drop an image into the main area.</li>
+            <li>Click and drag from a center point to make a circular selection.</li>
+            <li>Keeping an eye on the precision helper in the bottom right, adjust the selection with the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd>; you can increase or decrease the size of your selection with <kbd>+</kbd> <kbd>-</kbd>. Press <kbd>shift</kbd> to adjust in 20× larger increments.</li>
+            <li>When satisfied, press <kbd>enter</kbd> to accept the selection – it will then download as a PNG image, tightly cropped around the x and y bounds of the circular selection, with transparent corners. (If you wish to cancel the current selection, press <kbd>esc</kbd>.)</li>
+            <li>Repeat steps 2 through 4 for as many circles as you'd like to select.</li>
+        </ol>
 
         <p class="separator"></p>
 
         <h2>User interface</h2>
 
-        <p>You've got the main view containing the active image. In it, you can use your mouse to make circular <em>selections</em>. It also provides an overview over which fields (or other objects) you've already selected.</p>
+        <h3>Work area</h3>
+        <p>Filling most of the screen, the main work area contains the active image (or, initially, a prompt to select one). You can use your mouse to create <em>selections</em>:</p>
+        <ol>
+            <li>Click at the desired center.</li>
+            <li>Then drag without letting go of the left mouse button to make a circular selection.</li>
+            <li>Once you let go of the left mouse button, the prelimiary selection can be refined. Keeping an eye on the <em>precision helper</em> in the bottom right (more about that in a bit), adjust the selection with the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> (or with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> if you feel particularly gamery today); you can increase or decrease the size of your selection with <kbd>+</kbd> <kbd>-</kbd> (or <kbd>P</kbd> <kbd>O</kbd> if you don't have math operators handy on your keyboard layout). Press <kbd>shift</kbd> at the same time to adjust things in 20× larger increments.</li>
+            <li>
+                Further selections can either be made in the same click-and-drag-and-refine manner, or by two other ways:
+                <ul>
+                    <li>Clicking-without-dragging a spot, which will replicate the most recent selection centered around that spot, ready to be refined.</li>
+                    <li>Or by tapping one of <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> (or their gamer equivalents), which will replicate the most recent selection right next to itself in the cardinal direction determined by the pressed key.</li>
+                </ul>
+            </li>
+        </ol>
+        <p>TODO hovering over a selection will highlight it in the table and in the work area</p>
+        <p>Unless you uncheck the "show selections" setting, the work area also provides an overview over which fields (or other objects) you've already selected.</p>
 
-        <p>The sidebar on the right, meanwhile, packs a bunch: You can use it to select another image, download or remove previous selections, change the various settings detailed further down, and export or restore your settings or the <em>selection cache</em>. At the bottom, the <em>precision helper</em> aids you in hitting your marks when making a selection.</p>
+        <h3>Sidebar</h3>
+        <p>The sidebar on the right, meanwhile, packs a punch: You can use it to…</p>
+        <ul>
+            <li>…open this user's guide. But you've already figured that out, it seems. Nice going!</li>
+            <li>…select another image. Your selections in the current image will be kept around in the <a href="javascript:showUsersGuide('ug-selection-cache')">selection cache</a>: You can recover them by selecting the same image again, even after a page reload.</li>
+            <li>…download or remove previous selections: Once you've made your first selection, a table listing your previous selections appears in the sidebar. Read more about it below this list.</li>
+            <li>…change the various settings detailed later in this document.</li>
+            <li>…and export or restore your settings or the <em>selection cache</em>. This is also described later in this document.</li>
+        </ul>
+
+        <p>The <em>selections table</em> TODO You can TODO hover, download, delete, adopt geo ones. table is reverse-chronological: your most recent selection is at the top. removing an accepted geo one will effectively turn it back into a suggestion. in order to fully get rid of it, either TODO</p>
+        If the current image has associated geo data, selections from other images that TODO may show up
+
+        <h3>Precision helper</h3>
+        <p>Below the sidebar, the <em>precision helper</em> aids you in hitting your marks when making a selection. TODO more: shows the center and eight areas around the perimeter of the selection: the four cardinal directions and the points centered between them</p>
+
+        <h3>User's guide, status messages, error messages</h3>
+        <p>These are worth mentioning, too.</p>
+        <p>The user's guide should be self-explanatory (literally!).</p>
+        <p>Status messages may pop up in the bottom left corner and inform you about ongoing processes like zipping, or, say, about successful selection cache restores. They disappear automatically, either two seconds after being summoned or after the process they're assuring you hasn't failed is finished.</p>
+        <p>Error messages, should one appear, cover the bottom part of the screen, are roughly the same shade of red as the two <a href="https://twitter.com/ScuderiaFerrari/status/1304113260124344325">SF1000</a> cars that raced around the Mugello circuit on the weekend of this tool's initial release, and don't disappear automatically. If you want to experience one, simply try to restore your settings from some random file instead of a proper backup.</p>
 
         <p class="separator"></p>
 
         <h2>Keyboard Controls</h2>
 
-        <p>TODO backspace as well, shift, etc.</p>
+        <p>Even though most of them have been described in the previous section, here's a table summarizing their functions: TODO make sure the lingo is equivalent to the previous section</p>
+
+        <table>
+            <tr>
+                <td><kbd>↑</kbd>, <kbd>W</kbd></td>
+                <td>Move the current selection upwards by a pixel (or 20 if <kbd>shift</kbd> is pressed), or if there is no current selection, make a copy of the most recent selection right above itself that can then be further refined.<br>
+                If you're using a <em>non-qwerty key layout</em>, <kbd>W</kbd> probably (i.e. if your browser abides by the standards) won't do anything: Instead, press the key that's located where the <kbd>W</kbd> key would be on conventional key layouts (the same goes for all other letter keys). It's implemented <a href="https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code">that way</a> because I'm told that's how you'll expect it to work. ¯\_(ツ)_/¯</td>
+            </tr>
+            <tr>
+                <td><kbd>↓</kbd>, <kbd>S</kbd></td>
+                <td>Analogous, but downwards.</td>
+            </tr>
+            <tr>
+                <td><kbd>↓</kbd>, <kbd>S</kbd></td>
+                <td>Analogous, but downwards.</td>
+            </tr>
+            <tr>
+                <td><kbd>←</kbd>, <kbd>A</kbd></td>
+                <td>Analogous, but leftwards.</td>
+            </tr>
+            <tr>
+                <td><kbd>→</kbd>, <kbd>D</kbd></td>
+                <td>Analogous, but rightwards.</td>
+            </tr>
+            <tr>
+                <td><kbd>+</kbd>, <kbd>P</kbd></td>
+                <td>Increase the radius of the current selection by a pixel (or 20 if <kbd>shift</kbd> is pressed).</td>
+            </tr>
+            <tr>
+                <td><kbd>-</kbd>, <kbd>O</kbd></td>
+                <td>Analogous, but this decreases the radius.</td>
+            </tr>
+            <tr>
+                <td><kbd>*</kbd></td>
+                <td>Analogous to <kbd>shift</kbd> <kbd>+</kbd> because I'm using a German key layout, and one of the perks of building your own tools is that you can account for your weird edge cases with hacks instead of having to look for more elegant solutions.</td>
+            </tr>
+            <tr>
+                <td><kbd>_</kbd></td>
+                <td>Analogous to <kbd>shift</kbd> <kbd>-</kbd> for the same reason.</td>
+            </tr>
+            <tr>
+                <td><kbd>shift</kbd></td>
+                <td>Increase the potency of the previous operations by a factor of 20. Your key switches will be grateful.</td>
+            </tr>
+            <tr>
+                <td><kbd>enter</kbd></td>
+                <td><em>Accept</em> the current selection, thereby freezing its size and location and adding it to both the table in the sidebar and the selection cache. TODO link to those sections</td>
+            </tr>
+            <tr>
+                <td><kbd>backspace</kbd></td>
+                <td>Delete the most recently accepted selection. Note that this is irreversible, and pressing <kbd>backspace</kbd> multiple times will delete multiple selections. Be careful!</td>
+            </tr>
+            <tr>
+                <td><kbd>esc</kbd></td>
+                <td>Cancel the current selection.</td>
+            </tr>
+        </table>
+
+        <p>All of these are disabled if you're entering text into the <a href="javascript:showUsersGuide('ug-filename');">filename template field</a>, of course. TODO link</p>
 
         <p class="separator"></p>
 
@@ -715,7 +829,7 @@
         <p>Adjusts the zoom level of the thumbnails shown in the precision helper in the bottom right. At 1×, the image pixels will be shown at original scale with regard to <em>logical</em> browser pixels – on a high-dpi or retina device, they will thus be scaled up with regard to <em>physical</em> pixels. This is by design.</p>
 
         <h3>Download immediately</h3>
-        <p>Uncheck this checkbox if you prefer downloading your images through the selection table after first making a bunch of selections.</p>
+        <p>Uncheck this checkbox if you prefer downloading your images through the selections table after first making a bunch of selections.</p>
 
         <h3 id="ug-filename">Filename</h3>
 
@@ -756,7 +870,7 @@
             </tr>
         </table>
 
-        <p>TODO if geo data, the following too</p>
+        <p>If the current image has associated geo data, the following variables are available, as well:</p>
 
         <table>
             <tr>
@@ -782,7 +896,7 @@
         <p>On the other hand, if you choose to uncheck this checkbox, the surroundings of the circular selections will be visible in the corners of the final images – essentially, this turns the selection into a rectangle. This comes in handy for making a video like the one at the top of this user's guide, where different circular objects are shown in one place, with mainly their surroundings changing.</p>
         <p>Since this removes the need for transparency, the images are downloaded as more space-efficient JPG files. The encoding quality is set at 100%, making this effectively as lossless as PNG.</p>
 
-        TODO adds box around current and highlighted selections
+        <p>TODO adds box around current and highlighted selections</p>
 
         <h3>Vertical margin</h3>
         <p>If you increase this slider from its default of 0, a vertical margin whose size you can set as a fraction of the selection radius is added above and below the circular core of the selection.</p>
@@ -791,34 +905,47 @@
         <p>Analogous to the vertical margin, but towards the left and right.</p>
         <p>Together, these two sliders allow you to dial in the range of surroundings to include in the images. For the video at the top, the vertical margin was set to 0.2 and the horizontal margin to 1.8, yielding an aspect ratio (as shown below the two sliders) of 1:2.33 (i.e. <a href="https://en.wikipedia.org/wiki/CinemaScope">cinemascope</a>!).</p>
 
-        TODO https://en.wikipedia.org/wiki/21:9_aspect_ratio (also use in aspect ratio pretty-printer)
+        <p>TODO https://en.wikipedia.org/wiki/21:9_aspect_ratio (also use in aspect ratio pretty-printer)</p>
 
         <p class="separator"></p>
 
         <h2>Settings & Selection Backup & Restore</h2>
 
-        <p>TODO</p>
+        <p>Using the buttons near the bottom of the sidebar, you can download a backup of your settings or the selection cache. These backups take the form of JSON files – you can expect and modify them in any text editor; their structure is simple enough that you won't need further information about their schemas.</p>
 
-        <h2>Selection cache</h2>
+        <p>These backups would be pretty bad backups if you couldn't restore them, so you can! Note the differing semantics:</p>
+        <ul>
+            <li>If you restore a settings backup, the current settings are discarded and replaced with the settings stored in the backup.</li>
+            <li>When restoring a selection cache backup, on the other hand, any selections from the backup that aren't already in the current selection cache are added to it – nothing is removed from the current selection cache. In mathy terms, that's the <em>union</em> of the two selection caches.</li>
+            <li>If you'd rather <em>replace</em> the current selection cache with the one from your backup, simply purge the current selection cache using the tiny little link at the very bottom of the sidebar (and, if you want, delete all current selections using the link nearby) before restoring the backup.</li>
+        </ul>
+        <p>Because settings and selection cache are stored in TODO link local storage, which – depending on your browser settings – may be wiped occasionally, I recommend making occasional backups, <em>especially</em> of your selection cache.</p>
+
+        <p class="separator"></p>
+
+        <h2 id="ug-selection-cache">Selection cache</h2>
+
+        <p>TODO ("Same", in this context, is defined through equality of filename, filesize, and image width/height in pixels.)</p>
 
         <p>TODO reassure: kept, can be dl'd and reapplied with union semantics (if want to replace: delete selection cache and current selections, then upload)</p>
 
         <p class="separator"></p>
 
         <h2 id="ug-geoawareness">Geo-Awareness</h2>
-        <p>If the dropped file's filename if of the form TODO with latlon, the cropped circles will be named based on their center point's latitude, longitude and circle radius (that one in meters). This assumes that the aerial imagery you've uploaded is laid out based on a TODO what kinda projection?, which probably isn't true (it's the Web Mercator projection TODO if aerialbot) – but on small scales (sub-10km), it's accurate enough (no less accurate than the "registration" of the imagery, i bet).</p>
+        <p>If the dropped file's filename is of the form TODO refer to example, with latlon, the cropped circles will be named based on their center point's latitude, longitude and circle radius (that one in meters). This assumes that the aerial imagery you've uploaded is laid out based on a TODO what kinda projection?, which probably isn't true (it's the Web Mercator projection TODO if aerialbot) – but on small scales (sub-10km), it's accurate enough (no less accurate than the "registration" of the imagery, i bet).</p>
+        TODO also unlocks output filename parameters
+        TODO also latlon shown in selections table
+        TODO also shown in other images covering a similar area you upload subsequently (and show selection is enabled), with dashed border. can be promoted to current image though table.
 
         <p class="separator"></p>
 
         <h2>Notes</h2>
-
-        <p>— Keep the images you "upload" below 50 megapixels – things get sluggish fast if you shoot past this limit. Then again, I've developed and tested this tool using a 5-year-old laptop, so your mileage may vary.</p>
-
-        <p>TODO ZIP filename: based on image filename</p>
-
-        <p>TODO clicking, moving to "resurrect" old selection</p>
-
-        <p>TODO table usage</p>
+        <p>None of these bullet points fit well into the previous section, so here they are:</p>
+        <ul>
+            <li>TODO Check out ærialbot, a Python-based tool that, while originally designed to run Twitter bots, can be used to download large-scale satellite maps TODO more</li>
+            <li>Keep the images you "upload" below 50 megapixels – things get sluggish fast if you shoot past this limit. Then again, I've developed and tested this tool using a 5-year-old laptop, and I have a horrendous habit of having way too much stuff burning CPU cycles in the background, so your mileage may vary.</li>
+            <li>If you have opinions about this tool, whether they range from the purest love to the esteem in which conservatives seem to hold epidemiology, <a href="https://github.com/doersino/cropcircles/issues/new">tell me about them</a>! Any constructive feedback will probably be implemented swiftly unless that'd be too much work.</li>
+        </ul>
 
         <p class="separator"></p>
 
@@ -831,14 +958,16 @@
 
         <h2>Credit</h2>
         <p>Building this tool would have been more difficult than it turned out to be if it wasn't for the work of others, including but not limited to the following.</p>
-        <p>— The typeface used in the tool is <a href="https://github.com/be5invis/Iosevka/"><em>Iosevka Aile</em> by Belleve Invis</a>. It is licensed under the <em>SIL Open Font License Version 1.1</em>, see <a href="https://github.com/be5invis/Iosevka/blob/master/LICENSE.md">here</a>.</p>
-        <p>— Zipping is done with <a href="https://github.com/Stuk/jszip/">JSZip</a> in accordance with its <em>MIT License</em>, see <a href="https://github.com/Stuk/jszip/blob/master/LICENSE.markdown">here</a>.</p>
-        <p>— The general layout has been adapted from <a href="https://github.com/doersino/markdeep-diagram-drafting-board">Markdeep Diagram Drafting Board</a>, a previous project of mine.</p>
-        <p>— The source code of Craciun Cezar's <a href="https://github.com/craciuncezar/Simple-web-image-editor">Simple Web Image Editor</a> was referenced during the implementation of some key features.</p>
-        <p>— The sample image, from which all of the examples in this user's guide have been derived, has been downloaded from <a href="https://www.google.com/maps/place/42°18'48.7%22N+113°51'19.8%22W/@42.3135278,-113.8576887,6000m/">Google Maps</a> using <a href="https://github.com/doersino/aerialbot">ærialbot</a>.</p>
-        <p>— The same <a href="https://www.google.com/maps/place/43°37'03.8%22N+113°24'21.7%22W/@43.6154232,-113.4144375,2892m/">goes</a> for the logo background image, which has additionally been edited and optimized with Adobe Photoshop CS6.</p>
-        <p>— All of the code was written in Sublime Text, and testing was primarily carried out in Safari on macOS Mojave.</p>
-        <p>— Black Lives Matter. (That's not as unrelated as you might think: Black slaves were forced to do farm work, which enriched white land owners, many of which surely later used portions of that money to install the center pivot irrigation systems this tool was inspired by.)</p>
+        <ul>
+            <li>The typeface used in the tool is <a href="https://github.com/be5invis/Iosevka/"><em>Iosevka Aile</em> by Belleve Invis</a>. It is licensed under the <em>SIL Open Font License Version 1.1</em>, see <a href="https://github.com/be5invis/Iosevka/blob/master/LICENSE.md">here</a>.</li>
+            <li>Zipping is done with <a href="https://github.com/Stuk/jszip/">JSZip</a> in accordance with its <em>MIT License</em>, see <a href="https://github.com/Stuk/jszip/blob/master/LICENSE.markdown">here</a>.</li>
+            <li>The general layout has been adapted from <a href="https://github.com/doersino/markdeep-diagram-drafting-board">Markdeep Diagram Drafting Board</a>, a previous project of mine.</li>
+            <li>The source code of Craciun Cezar's <a href="https://github.com/craciuncezar/Simple-web-image-editor">Simple Web Image Editor</a> was referenced during the implementation of some key features.</li>
+            <li>The sample image, from which all of the examples in this user's guide have been derived, has been downloaded from <a href="https://www.google.com/maps/place/42°18'48.7%22N+113°51'19.8%22W/@42.3135278,-113.8576887,6000m/">Google Maps</a> using <a href="https://github.com/doersino/aerialbot">ærialbot</a>.</li>
+            <li>The same <a href="https://www.google.com/maps/place/43°37'03.8%22N+113°24'21.7%22W/@43.6154232,-113.4144375,2892m/">goes</a> for the logo background image, which has additionally been edited and optimized with Adobe Photoshop CS6.</li>
+            <li>All of the code was written in <a href="https://www.sublimetext.com">Sublime Text</a>, the <a href="https://git-scm.com">Git</a> commits were almost exclusively authored in <a href="https://www.sublimemerge.com">Sublime Merge</a>, and testing was primarily carried out in Safari on macOS Mojave.</li>
+            <li>Black Lives Matter. (That's not as unrelated as you might think: Black slaves were forced to do farm work, which enriched white land owners, many of which surely later used portions of that money to install the center pivot irrigation systems this tool was inspired by.)</li>
+        </ul>
 
         <img src="assets/readme-collage-1.jpg">
     </section>
