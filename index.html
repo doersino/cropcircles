@@ -737,7 +737,7 @@
         </ul>
 
         <p>The <em>selections table</em> lists the selections you've made in the current image (plus, if it has associated geo data, any selections you've made in other images that fall into the geographical area covered by the image). Hovering over a selection in the table highlights it in the main work area. Using the buttons in right-most column of the table, you can (re)download or delete a specific selection, or "accept" a selection you've previously made in another image that is located in the geographical area covered by the current image – this will copy it into the main part of the selections table (if you delete such a selection, it returns to the "geo suggestions" section).</p>
-        <p>Recall that that the selections you've made in the current image are kept in the <a href="javascript:showUsersGuide('ug-selection-cache');">selection cache</a>, so this table will be restored if you work on another image, then select this one again. TODO word better?</p>
+        <p>Recall that that the selections you've made in the current image are kept in the <a href="javascript:showUsersGuide('ug-selection-cache');">selection cache</a>, so this table will be restored if you work on another image, then select this one again.</p>
         <p>A button below the table allows you to download all selections in a ZIP. Note that if you have made more than a few selections that cover a large area (> 1 megapixel), zipping can be slower than downloading them all individually – that seems to be a limitation of the <a href="https://github.com/Stuk/jszip/">JSZip</a> library.</p>
 
         <h3>Precision helper</h3>
@@ -938,7 +938,7 @@
         <p>If the input image's filename contains a part of the form "sw[lat],[lon]ne[lat],[lon]", the cropped circles will be named based on their center point's latitude, longitude and circle radius (that one in meters). This assumes that the aerial imagery you've uploaded is laid out based on the Web Mercator projection, which is common among online mapping services like Google Maps.</p>
         <p>If geo data is known for the current image, additional output filename variables are unlocked, and the default template also changes. Read more about that <a href="javascript:showUsersGuide('ug-filename');">here</a>.</p>
         <p>Also, latitude, longitude and radius in meters are shown in the selections table in the sidebar.</p>
-        <p>TODO also shown in other images covering a similar area you upload subsequently (and show selection is enabled), with dashed border. can be promoted to current image though table.</p>
+        <p>Selections you make in images with associated geo data will also show up in other images covering the same area, with a dashed border. They are not automatically merged into the list of of selections of that image, instead they can be "promoted" though the selections table in the sidebar.</p>
 
         <p class="separator"></p>
 
