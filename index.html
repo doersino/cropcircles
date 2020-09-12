@@ -642,7 +642,7 @@
                 restore…
             </button>
         </section>
-        <p><span>The same goes for your <em>selections</em>, both your current ones and ones you've made in previous sessions. This allows you to close this tool mid-work, reopen it, drag the same image in again, and continue selecting from where you left off – or a different image <a>covering an area</a> you've previously made selections in. Again, your browser might decide to evict this data from its cache, hence:</span></p>
+        <p><span>The same goes for your <em>selections</em>, both your current ones and ones you've made in previous sessions. This allows you to close this tool mid-work, reopen it, drag the same image in again, and continue selecting from where you left off – or a different image <a href="javascript:showUsersGuide('ug-geoawareness');">covering an area</a> you've previously made selections in. Again, your browser might decide to evict this data from its cache, hence:</span></p>
         <section class="backup-restore">
             <button onclick="downloadSelectionCache();">
                 <svg viewBox="-11 -11 22 22" style="stroke: currentColor; stroke-width: 2.5; fill: none; height: 0.8em;"><path d="M0,-10 L0,10 M-10,0 L0,10 L10,0"></path></svg>
@@ -689,10 +689,9 @@
     <section class="users-guide">
         <a href="javascript:hideUsersGuide();" class="hide">×</a>
         <p class="hero"><a href="https://github.com/doersino/cropcircles"><em>Crop Circles</em></a> is a tool originally designed for cropping circular <a href="https://en.wikipedia.org/wiki/Center_pivot_irrigation">center pivot irrigation</a> fields from aerial imagery collected with, for example, <a href="https://github.com/doersino/aerialbot">ærialbot</a>.</p>
-        <p>It's an unabashedly-built-for-<a href="https://noahdoersing.com">myself</a> tool, with precisely the knobs and toggles I thought would enable me to fine-tune my workflow during the creation of a <a href="TODO link">series of videos</a> like the one below.</p>
+        <p>It's an unabashedly-built-for-<a href="https://noahdoersing.com">myself</a> tool, with precisely the knobs and toggles I thought would enable me to fine-tune my workflow during the creation of a series of videos like the one below.</p>
 
         <video controls loop poster="assets/video-poster-sample-sw42.286577541476696,-113.90409924217032ne42.340476458523305,-113.80691475782969.jpg">
-            <!-- TODO make this, based on the example image (or a higher-res version of it). also poster. -->
             <source src="assets/video-sample-sw42.286577541476696,-113.90409924217032ne42.340476458523305,-113.80691475782969.mp4" type="video/mp4">
         </video>
 
@@ -727,8 +726,7 @@
                 </ul>
             </li>
         </ol>
-        <p>TODO hovering over a selection will highlight it in the table and in the work area</p>
-        <p>Unless you uncheck the "show selections" setting, the work area also provides an overview over which fields (or other objects) you've already selected.</p>
+        <p>Unless you uncheck the "show selections" setting, the work area also provides an overview over which fields (or other objects) you've already selected. Hovering the mouse pointer over one of them highlights it in the table in the sidebar.</p>
 
         <h3>Sidebar</h3>
         <p>The sidebar on the right, meanwhile, packs a punch: You can use it to…</p>
@@ -740,17 +738,24 @@
             <li>…and export or restore your settings or the <em>selection cache</em>. This is also described later in this document.</li>
         </ul>
 
-        <p>The <em>selections table</em> TODO You can TODO hover, download, delete, adopt geo ones. table is reverse-chronological: your most recent selection is at the top. removing an accepted geo one will effectively turn it back into a suggestion. in order to fully get rid of it, either TODO</p>
-        If the current image has associated geo data, selections from other images that TODO may show up
+        <p>The <em>selections table</em> lists the selections you've made in the current image (plus, if it has associated geo data, any selections you've made in other images that fall into the geographical area covered by the image). Hovering over a selection in the table highlights it in the main work area. Using the buttons in right-most column of the table, you can (re)download or delete a specific selection, or "accept" a selection you've previously made in another image that is located in the geographical area covered by the current image – this will copy it into the main part of the selections table (if you delete such a selection, it returns to the "geo suggestions" section).</p>
+        <p>Recall that that the selections you've made in the current image are kept in the <a href="javascript:showUsersGuide('ug-selection-cache');">selection cache</a>, so this table will be restored if you work on another image, then select this one again. TODO word better?</p>
+        <p>A button below the table allows you to download all selections in a ZIP. Note that if you have made more than a few selections that cover a large area (> 1 megapixel), zipping can be slower than downloading them all individually – that seems to be a limitation of the <a href="https://github.com/Stuk/jszip/">JSZip</a> library.</p>
 
         <h3>Precision helper</h3>
-        <p>Below the sidebar, the <em>precision helper</em> aids you in hitting your marks when making a selection. TODO more: shows the center and eight areas around the perimeter of the selection: the four cardinal directions and the points centered between them</p>
+        <p>Below the sidebar, the <em>precision helper</em> aids you in hitting your marks when making a selection. It's divided into nine areas:</p>
+        <ul>
+            <li>The central square shows the central portion of the selection. A crosshairs trained on the very center pixel aids with alignment. Another line protudes from the middle of each of the sides of this square, this is mostly just handy when working on images of center pivot irrigation farms.</li>
+            <li>The four squares right above, below, right, and left of the central square show the areas of the image near the top, bottom, right, and left selection boundaries.</li>
+            <li>The corner squares show the areas of the image at the 1:30, 4:30, 7:30, and 10:30 positions with regard to the selection.</li>
+        </ul>
 
-        <h3>User's guide, status messages, error messages</h3>
-        <p>These are worth mentioning, too.</p>
+        <h3>User's guide</h3>
         <p>The user's guide should be self-explanatory (literally!).</p>
-        <p>Status messages may pop up in the bottom left corner and inform you about ongoing processes like zipping, or, say, about successful selection cache restores. They disappear automatically, either two seconds after being summoned or after the process they're assuring you hasn't failed is finished.</p>
-        <p>Error messages, should one appear, cover the bottom part of the screen, are roughly the same shade of red as the two <a href="https://twitter.com/ScuderiaFerrari/status/1304113260124344325">SF1000</a> cars that raced around the Mugello circuit on the weekend of this tool's initial release, and don't disappear automatically. If you want to experience one, simply try to restore your settings from some random file instead of a proper backup.</p>
+
+        <h3>Status & error messages</h3>
+        <p>Status messages may pop up in the bottom left corner and inform you about ongoing processes like zipping, or, say, about successful selection cache restores. They disappear automatically, either two seconds after being summoned or after the process they're keeping your updated on has finished.</p>
+        <p>Error messages, should they appear, cover the bottom part of the screen, are roughly the same shade of red as the two <a href="https://twitter.com/ScuderiaFerrari/status/1304113260124344325">SF1000</a> cars that raced around the Mugello circuit on the weekend of this tool's initial release, and don't disappear automatically. If you want to experience one, simply try to restore your settings from some random file instead of a proper backup.</p>
 
         <p class="separator"></p>
 
@@ -802,7 +807,7 @@
             </tr>
             <tr>
                 <td><kbd>enter</kbd></td>
-                <td><em>Accept</em> the current selection, thereby freezing its size and location and adding it to both the table in the sidebar and the selection cache. TODO link to those sections</td>
+                <td><em>Accept</em> the current selection, thereby freezing its size and location and adding it to both the table in the sidebar and the selection cache.</td>
             </tr>
             <tr>
                 <td><kbd>backspace</kbd></td>
@@ -814,7 +819,7 @@
             </tr>
         </table>
 
-        <p>All of these are disabled if you're entering text into the <a href="javascript:showUsersGuide('ug-filename');">filename template field</a>, of course. TODO link</p>
+        <p>All of these are disabled if you're entering text into the <a href="javascript:showUsersGuide('ug-filename');">filename template field</a>, of course.</p>
 
         <p class="separator"></p>
 
@@ -833,12 +838,13 @@
 
         <h3 id="ug-filename">Filename</h3>
 
-        <p>You can set the filenames TODO these names will of course also be used within zips. default is TODO</p>
+        <p>This is a template for the filenames of result images. It's used both for direct downloads and filenames within ZIPs. Makre sure <em>not to</em> specify the file extension, it's added automatically depending on other settings. If you leave this field empty, as is indeed the default, the default filename template (see first row of the following table) is used.</p>
+        <p>You can make use of the following variables:</p>
 
         <table>
             <tr>
                 <td>{default}</td>
-                <td>The default filename. Handy if all you want to change is adding a prefix or postfix.</td>
+                <td>The default filename: "cropcircles-x{x}y{y}r{r}" (or "cropcircles-{lat},{lon},{rm}m-x{x}y{y}r{r}" if the current image has associated geo data). Handy if all you want to change is adding a prefix or postfix.</td>
             </tr>
             <tr>
                 <td>{file}</td>
@@ -846,15 +852,15 @@
             </tr>
             <tr>
                 <td>{id}</td>
-                <td>Internal selection identifier, actually the millisecond-precision UNIX timestamp at which the selection was made, e.g. TODO.</td>
+                <td>Internal selection identifier, actually the millisecond-precision UNIX timestamp at which the selection was made, e.g. "1599251366699".</td>
             </tr>
             <tr>
                 <td>{date}</td>
-                <td>The current date at the time of download, in TODO ISO format, e.g. TODO.</td>
+                <td>The current date at the time of download, in <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString">simplified extended ISO format</a>, e.g. "2020-09-12T18.51.17.485Z".</td>
             </tr>
             <tr>
                 <td>{rand}</td>
-                <td>Random floating-point number between 0 and 1. TODO</td>
+                <td>Random integer with a (zero-padded) length of 10. E.g. "1708473213" or "0072495286". Handy as a filename prefix if you want the images to end up in a random order.</td>
             </tr>
             <tr>
                 <td>{x}</td>
@@ -870,16 +876,16 @@
             </tr>
         </table>
 
-        <p>If the current image has associated geo data, the following variables are available, as well:</p>
+        <p>If the current image has <a href="javascript:showUsersGuide('ug-geoawareness');">associated geo data</a>, the following variables are available, as well:</p>
 
         <table>
             <tr>
                 <td>{georect}</td>
-                <td>TODO georect of input image</td>
+                <td>Geo bounds of the input image, e.g. "sw42.2865,-113.9040ne42.3404,-113.8069".</td>
             </tr>
             <tr>
                 <td>{lat}</td>
-                <td>TODO lat of center of circle (assuming web mercator, etc.)</td>
+                <td>Latitude of the selection center.</td>
             </tr>
             <tr>
                 <td>{lon}</td>
@@ -887,16 +893,15 @@
             </tr>
             <tr>
                 <td>{rm}</td>
-                <td>Radius in meters. TODO depends on lat!</td>
+                <td>Selection radius in meters. (Note that the scale factor from pixels to meters depends on latitude.)</td>
             </tr>
         </table>
 
         <h3>Transparent background</h3>
         <p>If you leave this checkbox enabled, downloading your selections will yield PNG images with transparent corners: anything outside the bounds of the circular selections will be removed (like each of the three farms in-between the sections of this user's guide).</p>
-        <p>On the other hand, if you choose to uncheck this checkbox, the surroundings of the circular selections will be visible in the corners of the final images – essentially, this turns the selection into a rectangle. This comes in handy for making a video like the one at the top of this user's guide, where different circular objects are shown in one place, with mainly their surroundings changing.</p>
+        <p>On the other hand, if you choose to uncheck this checkbox, the surroundings of the circular selections will be visible in the corners of the final images – essentially, this turns the selection into a square. This square can be expanded into a rectangle that includes even more of the circular selection's surroundings through the following two settings. This functionality comes in handy for making a video like the one at the top of this user's guide, where different circular objects are shown in one place, with mainly their surroundings changing.</p>
         <p>Since this removes the need for transparency, the images are downloaded as more space-efficient JPG files. The encoding quality is set at 100%, making this effectively as lossless as PNG.</p>
-
-        <p>TODO adds box around current and highlighted selections</p>
+        <p>If enabled, you'll notice a box-shaped dashed line around the current (or highlighted) selection – that's just a preview of the crop area.</p>
 
         <h3>Vertical margin</h3>
         <p>If you increase this slider from its default of 0, a vertical margin whose size you can set as a fraction of the selection radius is added above and below the circular core of the selection.</p>
@@ -905,11 +910,9 @@
         <p>Analogous to the vertical margin, but towards the left and right.</p>
         <p>Together, these two sliders allow you to dial in the range of surroundings to include in the images. For the video at the top, the vertical margin was set to 0.2 and the horizontal margin to 1.8, yielding an aspect ratio (as shown below the two sliders) of 1:2.33 (i.e. <a href="https://en.wikipedia.org/wiki/CinemaScope">cinemascope</a>!).</p>
 
-        <p>TODO https://en.wikipedia.org/wiki/21:9_aspect_ratio (also use in aspect ratio pretty-printer)</p>
-
         <p class="separator"></p>
 
-        <h2>Settings & Selection Backup & Restore</h2>
+        <h2 id="ug-backups">Settings & Selection Backup & Restore</h2>
 
         <p>Using the buttons near the bottom of the sidebar, you can download a backup of your settings or the selection cache. These backups take the form of JSON files – you can expect and modify them in any text editor; their structure is simple enough that you won't need further information about their schemas.</p>
 
@@ -919,30 +922,32 @@
             <li>When restoring a selection cache backup, on the other hand, any selections from the backup that aren't already in the current selection cache are added to it – nothing is removed from the current selection cache. In mathy terms, that's the <em>union</em> of the two selection caches.</li>
             <li>If you'd rather <em>replace</em> the current selection cache with the one from your backup, simply purge the current selection cache using the tiny little link at the very bottom of the sidebar (and, if you want, delete all current selections using the link nearby) before restoring the backup.</li>
         </ul>
-        <p>Because settings and selection cache are stored in TODO link local storage, which – depending on your browser settings – may be wiped occasionally, I recommend making occasional backups, <em>especially</em> of your selection cache.</p>
+        <p>Because settings and selection cache are stored in <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage">local storage</a>, which – depending on your browser settings – may be wiped occasionally, I recommend making occasional backups, <em>especially</em> of your selection cache.</p>
 
         <p class="separator"></p>
 
         <h2 id="ug-selection-cache">Selection cache</h2>
-
-        <p>TODO ("Same", in this context, is defined through equality of filename, filesize, and image width/height in pixels.)</p>
-
-        <p>TODO reassure: kept, can be dl'd and reapplied with union semantics (if want to replace: delete selection cache and current selections, then upload)</p>
+        <p>As outlined in previous sections of this user's guide, the selection cache is where your selections are safeguarded agains inadvertent page reloads, browser crashes, or potential loss when working on another image for a bit before resuming work on a previously worked-on image. To this end, the selection cache is kept in <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage">local storage</a> and can be <a href="javascript:showUsersGuide('ug-backups');">backed up and restored</a>.</p>
+        <p>For simplicity's sake, sameness of two images is defined through equality of filename, filesize, and image width/height in pixels – so avoid situations where nominally-different images share all four of these attributes if you don't want selections made in one of them show up for the other one, as well.</p>
+        <p>The selection cache for the current image is shown in the selections table.</p>
+        <p>It can be purged (for all images you've ever made selections in!) using a link at the very bottom of the sidebar.</p>
 
         <p class="separator"></p>
 
         <h2 id="ug-geoawareness">Geo-Awareness</h2>
-        <p>If the dropped file's filename is of the form TODO refer to example, with latlon, the cropped circles will be named based on their center point's latitude, longitude and circle radius (that one in meters). This assumes that the aerial imagery you've uploaded is laid out based on a TODO what kinda projection?, which probably isn't true (it's the Web Mercator projection TODO if aerialbot) – but on small scales (sub-10km), it's accurate enough (no less accurate than the "registration" of the imagery, i bet).</p>
-        TODO also unlocks output filename parameters
-        TODO also latlon shown in selections table
-        TODO also shown in other images covering a similar area you upload subsequently (and show selection is enabled), with dashed border. can be promoted to current image though table.
+        <p>Since this tool was designed for use with aerial imagery, it seemed to make sense to carry any geo data associated with that imagery all the way through the pipeline, embedding it into the output images. In my own use case, I'm not actually doing anything with that data, but maybe that'll change.</p>
+        <p>Geo data, in the context of this tool, refers to latitude and longitude of the center points of the circular selections, which can be derived from the latitude and longitude of two points in the input image (and hardcoded assumptions about the projection the imagery uses). For simplicity's sake, these two points must be the southwest and northeast corners of the image.</p>
+        <p>If the input image's filename contains a part of the form "sw[lat],[lon]ne[lat],[lon]", the cropped circles will be named based on their center point's latitude, longitude and circle radius (that one in meters). This assumes that the aerial imagery you've uploaded is laid out based on the Web Mercator projection, which is common among online mapping services like Google Maps.</p>
+        <p>If geo data is known for the current image, additional output filename variables are unlocked, and the default template also changes. Read more about that <a href="javascript:showUsersGuide('ug-filename');">here</a>.</p>
+        <p>Also, latitude, longitude and radius in meters are shown in the selections table in the sidebar.</p>
+        <p>TODO also shown in other images covering a similar area you upload subsequently (and show selection is enabled), with dashed border. can be promoted to current image though table.</p>
 
         <p class="separator"></p>
 
         <h2>Notes</h2>
-        <p>None of these bullet points fit well into the previous section, so here they are:</p>
+        <p>None of these bullet points fit well into the previous sections, so here they are:</p>
         <ul>
-            <li>TODO Check out ærialbot, a Python-based tool that, while originally designed to run Twitter bots, can be used to download large-scale satellite maps TODO more</li>
+            <li>Check out <a href="https://github.com/doersino/aerialbot">ærialbot</a>, a Python-based tool that, while originally designed to run Twitter bots, can be used to download large-scale satellite maps of arbitrary areas. The sample image was obtained using ærialbot, for instance.</li>
             <li>Keep the images you "upload" below 50 megapixels – things get sluggish fast if you shoot past this limit. Then again, I've developed and tested this tool using a 5-year-old laptop, and I have a horrendous habit of having way too much stuff burning CPU cycles in the background, so your mileage may vary.</li>
             <li>If you have opinions about this tool, whether they range from the purest love to the esteem in which conservatives seem to hold epidemiology, <a href="https://github.com/doersino/cropcircles/issues/new">tell me about them</a>! Any constructive feedback will probably be implemented swiftly unless that'd be too much work.</li>
         </ul>
@@ -1091,21 +1096,31 @@
             pc.lineWidth = logicalCanvastoPhysicalCanvas(1);
             pc.strokeStyle = readCssVar("current-selection-stroke");
 
-            if (currentSelection) {
+            let selection = currentSelection;
+
+            // if no current selection, check if we're there's a highlighted one
+            if (!selection) {
+                selection = getSelection(highlightedSelectionId);
+                if (!selection) {
+                    selection = getRelevantGeoSelection(highlightedSelectionId);
+                }
+            }
+
+            if (selection) {
 
                 // there's 3x3 squares, each of which receives a different-but-similar treatment. it's possible to express this with two nested loops and a bunch of unintuitive index computation, but if you scroll back through the git history, you'll find a more verbose, imperative variant
                 [-1, 0, 1].forEach(x => {
                     [-1, 0, 1].forEach(y => {
 
                         // draw square from images
-                        let r = currentSelection.r;
+                        let r = selection.r;
                         if (x != 0 && y != 0) {
                             r /= Math.sqrt(2);
                         }
                         pc.drawImage(
                             image,
-                            currentSelection.x + (x * r) - w/6 / settings.precisionHelperZoom,
-                            currentSelection.y + (y * r) - h/6 / settings.precisionHelperZoom,
+                            selection.x + (x * r) - w/6 / settings.precisionHelperZoom,
+                            selection.y + (y * r) - h/6 / settings.precisionHelperZoom,
                             w/3 / settings.precisionHelperZoom,
                             h/3 / settings.precisionHelperZoom,
                             (1 + x) * W/3,
@@ -1139,9 +1154,9 @@
                             pc.moveTo(2*W/3, H/2);
                             pc.lineTo(2*W/3-W/18, H/2);
                             pc.stroke();
-                        } else {
+                        }/* else {*/
                             // here, logicalCanvastoPhysicalCanvas(r) is correct since the image is show at 1x (modulo zoom) as opposed to being fitted into the viewport
-                            let radius = logicalCanvastoPhysicalCanvas(currentSelection.r) * settings.precisionHelperZoom;
+                            let radius = logicalCanvastoPhysicalCanvas(selection.r) * settings.precisionHelperZoom;
                             r = radius;
                             if (x != 0 && y != 0) {
                                 r /= Math.sqrt(2);
@@ -1164,9 +1179,13 @@
                                 0,
                                 2 * Math.PI
                                 );
+                            if (selection.id && selection.id == highlightedSelectionId) {
+                                pc.fillStyle = readCssVar("selections-fill");
+                                pc.fill();
+                            }
                             pc.stroke();
                             pc.restore();
-                        }
+                        /*}*/
                     });
                 });
             }
@@ -1318,7 +1337,6 @@
         }
 
         // note: x, y must be in in image space. this function is correct if the imagery follows the web mercator projection, which most online mapping services use (i.e. which aerialbot emits).
-        // TODO getLat, getLon instead?
         function getLatLon(x, y) {
 
             // invert y (since image y increases from top to bottom, but latitude increases from bottom to top)
@@ -1341,7 +1359,6 @@
             return {lat: lat, lon: lon};
         }
 
-        // TODO getX, getY instead?
         function getXY(lat, lon) {
             let west = geoRect.sw.lon;
             let east = geoRect.ne.lon;
@@ -1457,7 +1474,7 @@
             let reader = new FileReader();
             reader.onload = e => {
                 installImage(e.target.result);
-                clearStatus();  // TODO eh
+                clearStatus();
             };
             reader.readAsDataURL(file);
         }
@@ -1527,9 +1544,6 @@
                 return;
             }
 
-            // TODO move/change this status, only show if actually cropping
-            setStatus("Cropping image…", true);
-
             let sel = {
                 id: Date.now(),
                 fileid: imageInfo.fileid,
@@ -1567,8 +1581,6 @@
 
             renderWork();
             renderPrecisionHelper();
-
-            clearStatus();
         }
 
         function cancelCurrentSelection() {
@@ -1645,6 +1657,7 @@
 
         function highlightSelection(id) {
             highlightedSelectionId = id;
+            renderPrecisionHelper();
             renderWork();
         }
 
@@ -1764,9 +1777,10 @@
 
                 tableRowFor(id).classList.add("hover");
                 //tableRowFor(id).scrollIntoView();  // this would be neat if it was a no-op when the row is already in view
-                highlightedSelectionId = id;
+                highlightSelection(id);
+            } else {
+                highlightSelection(null);
             }
-            renderWork();
         });
 
 
@@ -1914,7 +1928,7 @@
                 file: imageInfo.name,
                 id: sel.id,
                 date: (new Date()).toISOString().replace(/\:/g, "."),
-                rand: Math.random(),
+                rand: (Math.random() + "").slice(2,12),
                 x: parseInt(sel.x),
                 y: parseInt(sel.y),
                 r: parseInt(sel.r),
@@ -2003,10 +2017,13 @@
         }
 
         function cropAndDownload(id) {
+            setStatus("Cropping image and preparing for download…", true);
             cropAndPrepareBlob(id, (filename, blob) => {
                 let url = URL.createObjectURL(blob);
                 download(url, filename)
                 URL.revokeObjectURL(url);
+
+                clearStatus();
             });
         }
 
@@ -2060,6 +2077,8 @@
                 factor = larger;
             }
 
+            console.log(e.key, e.code);
+
             switch (e.key) {
                 case "Enter":
                     acceptCurrentSelection();
@@ -2072,48 +2091,58 @@
                     break;
 
                 case "ArrowUp":
-                case "w":
-                case "W":
                     moveCurrentSelection(0, -factor);
                     break;
                 case "ArrowDown":
-                case "s":
-                case "S":
                     moveCurrentSelection(0, factor);
                     break;
                 case "ArrowLeft":
-                case "a":
-                case "A":
                     moveCurrentSelection(-factor, 0);
                     break;
                 case "ArrowRight":
-                case "d":
-                case "D":
                     moveCurrentSelection(factor, 0);
                     break;
 
                 case "+":
-                case "p":
-                case "P":
                     scaleCurrentSelection(factor);
                     break;
+                case "-":
+                    scaleCurrentSelection(-factor);
+                    break;
+
                 case "*":  // "shift +" on the German keyboard layout i use
                     scaleCurrentSelection(larger);
-                    break;
-                case "-":
-                case "o":
-                case "O":
-                    scaleCurrentSelection(-factor);
                     break;
                 case "_":  // "shift -" on the German keyboard layout i use
                     scaleCurrentSelection(-larger);
                     break;
 
                 default:
-                  return;  // quit when we don't want to handle the key event
-              }
 
-              // TODO switch based on .code ("KeyW", etc.) for wasd. how to handle default case above then?
+                    // handle wasd based on key codes, i.e. positions instead
+                    switch (e.code) {
+                        case "KeyW":
+                            moveCurrentSelection(0, -factor);
+                            break;
+                        case "KeyS":
+                            moveCurrentSelection(0, factor);
+                            break;
+                        case "KeyA":
+                            moveCurrentSelection(-factor, 0);
+                            break;
+                        case "KeyD":
+                            moveCurrentSelection(factor, 0);
+                            break;
+                        case "KeyP":
+                            scaleCurrentSelection(factor);
+                            break;
+                        case "KeyO":
+                            scaleCurrentSelection(-factor);
+                            break;
+                        default:
+                            return;  // quit when we don't want to handle the key event
+                    }
+              }
 
             // cancel the default action to avoid it being handled twice
             e.preventDefault();
@@ -2422,7 +2451,7 @@
                 return false;
             });
 
-            // TODO explicitly order by id (descending)? but the order is actually guaranteed anyway
+            // could explicitly order by id (descending) here, but the order is actually guaranteed anyway because the selection cache is a list that's originally been populated in order of id
             cachedSelections.forEach(sel => {
                 selections.push(sel);
                 addToTable(sel.id);
@@ -2479,8 +2508,7 @@
                 return sel;
             });
 
-            // TODO explicitly order by id (descending)? but the order is actually guaranteed anyway
-
+            // could explicitly order by id (descending) here, but the order is actually guaranteed anyway because the selection cache is a list that's originally been populated in order of id
             renderRelevantGeoSelectionsTable();
             renderWork();
         }
@@ -2566,13 +2594,19 @@
         /////////////////////
 
         let status = document.querySelector(".status");
+        let statusTimeout = null;
 
         // helper function for displaying status messages
         function setStatus(message, persist) {
             status.innerHTML = message;
             status.classList.remove("hidden");
             if (!persist) {
-                setTimeout(clearStatus, 2000);
+
+                // clear any previous timeout first – it would cause the new status to disappear earlier than intended
+                if (statusTimeout) {
+                    clearTimeout(statusTimeout);
+                }
+                statusTimeout = setTimeout(clearStatus, 2000);
             }
         }
 
@@ -2639,9 +2673,6 @@
         setupSelectionCache();
 
         setupUsersGuide();
-
-        // TODO remove this
-        showUsersGuide();
     </script>
 </body>
 </html>

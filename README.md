@@ -12,7 +12,7 @@ Among other adjectives, it is...
 * *highly configurable* – Both the tool's behavior and the shape of the end results can be tweaked.
 * *fast* – About as fast as an in-browser tool of its kind can reasonably be, anyway.
 * *small* – Less than 2000 lines of vanilla JavaScript.
-* *robust* – You can **back up and restore your settings and selections**, which are also kept in [local storage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage).
+* *robust* – Your settings and selections are kept in [local storage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage), and you can back up and restore them.
 * *well-documented* – Read the next sentence for more info.
 
 *For more details, **refer to the user's guide** – you can access it through the "Learn more..." link within the web app.*
