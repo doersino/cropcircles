@@ -600,11 +600,9 @@
         <hr>
 
         <label><input type="checkbox" class="transparent-background-checkbox" data-default="yes" onclick="updateTransparentBackground(this);" checked> transparent background</label>
-        <span>If <em>un</em>checked, the surroundings of the circular selection will be visible in the corners of the final images – essentially, this turns the selection into a rectangle. You can add some margin with the options below. <!--Also, since in this case there is no need for transparency anymore, the final image will be a JPG instead of a PNG.--></span>
+        <span>If <em>un</em>checked, the surroundings of the circular selection will be visible in the corners of the final images – <a href="javascript:showUsersGuide('ug-transparentbackground');">essentially</a>, this turns the selection into a rectangle. You can add some margin with the options below.</span>
 
         <section class="margin-settings disabled">
-            TODO image quality setting?
-
             <label>
                 <input type="range" min="0.0" max="4.0" step="0.1" value="0.0" data-default="0.0" class="vertical-margin-slider" oninput="adjustVerticalMargin(this)" disabled>
                 <br>
@@ -761,7 +759,7 @@
 
         <h2>Keyboard Controls</h2>
 
-        <p>Even though most of them have been described in the previous section, here's a table summarizing their functions: TODO make sure the lingo is equivalent to the previous section</p>
+        <p>Even though most of them have been described in the previous section, here's a table summarizing their functions:</p>
 
         <table>
             <tr>
@@ -897,7 +895,7 @@
             </tr>
         </table>
 
-        <h3>Transparent background</h3>
+        <h3 id="ug-transparentbackground">Transparent background</h3>
         <p>If you leave this checkbox enabled, downloading your selections will yield PNG images with transparent corners: anything outside the bounds of the circular selections will be removed (like each of the three farms in-between the sections of this user's guide).</p>
         <p>On the other hand, if you choose to uncheck this checkbox, the surroundings of the circular selections will be visible in the corners of the final images – essentially, this turns the selection into a square. This square can be expanded into a rectangle that includes even more of the circular selection's surroundings through the following two settings. This functionality comes in handy for making a video like the one at the top of this user's guide, where different circular objects are shown in one place, with mainly their surroundings changing.</p>
         <p>Since this removes the need for transparency, the images are downloaded as more space-efficient JPG files. The encoding quality is set at 100%, making this effectively as lossless as PNG.</p>
@@ -908,11 +906,11 @@
 
         <h3>Horizontal margin</h3>
         <p>Analogous to the vertical margin, but towards the left and right.</p>
-        <p>Together, these two sliders allow you to dial in the range of surroundings to include in the images. For the video at the top, the vertical margin was set to 0.2 and the horizontal margin to 1.8, yielding an aspect ratio (as shown below the two sliders) of 1:2.33 (i.e. <a href="https://en.wikipedia.org/wiki/CinemaScope">cinemascope</a>!).</p>
+        <p>Together, these two sliders allow you to dial in the range of surroundings to include in the images: For the example video included at the beginning of this document, the vertical margin was set to 0.2 and the horizontal margin to 1.8, yielding an aspect ratio (as shown below the two sliders) of 1:2.33 (i.e. <a href="https://en.wikipedia.org/wiki/CinemaScope">cinemascope</a>).</p>
 
         <p class="separator"></p>
 
-        <h2 id="ug-backups">Settings & Selection Backup & Restore</h2>
+        <h2 id="ug-backups">Backup & Restore</h2>
 
         <p>Using the buttons near the bottom of the sidebar, you can download a backup of your settings or the selection cache. These backups take the form of JSON files – you can expect and modify them in any text editor; their structure is simple enough that you won't need further information about their schemas.</p>
 
@@ -1096,31 +1094,21 @@
             pc.lineWidth = logicalCanvastoPhysicalCanvas(1);
             pc.strokeStyle = readCssVar("current-selection-stroke");
 
-            let selection = currentSelection;
-
-            // if no current selection, check if we're there's a highlighted one
-            if (!selection) {
-                selection = getSelection(highlightedSelectionId);
-                if (!selection) {
-                    selection = getRelevantGeoSelection(highlightedSelectionId);
-                }
-            }
-
-            if (selection) {
+            if (currentSelection) {
 
                 // there's 3x3 squares, each of which receives a different-but-similar treatment. it's possible to express this with two nested loops and a bunch of unintuitive index computation, but if you scroll back through the git history, you'll find a more verbose, imperative variant
                 [-1, 0, 1].forEach(x => {
                     [-1, 0, 1].forEach(y => {
 
                         // draw square from images
-                        let r = selection.r;
+                        let r = currentSelection.r;
                         if (x != 0 && y != 0) {
                             r /= Math.sqrt(2);
                         }
                         pc.drawImage(
                             image,
-                            selection.x + (x * r) - w/6 / settings.precisionHelperZoom,
-                            selection.y + (y * r) - h/6 / settings.precisionHelperZoom,
+                            currentSelection.x + (x * r) - w/6 / settings.precisionHelperZoom,
+                            currentSelection.y + (y * r) - h/6 / settings.precisionHelperZoom,
                             w/3 / settings.precisionHelperZoom,
                             h/3 / settings.precisionHelperZoom,
                             (1 + x) * W/3,
@@ -1154,9 +1142,9 @@
                             pc.moveTo(2*W/3, H/2);
                             pc.lineTo(2*W/3-W/18, H/2);
                             pc.stroke();
-                        }/* else {*/
+                        } else {
                             // here, logicalCanvastoPhysicalCanvas(r) is correct since the image is show at 1x (modulo zoom) as opposed to being fitted into the viewport
-                            let radius = logicalCanvastoPhysicalCanvas(selection.r) * settings.precisionHelperZoom;
+                            let radius = logicalCanvastoPhysicalCanvas(currentSelection.r) * settings.precisionHelperZoom;
                             r = radius;
                             if (x != 0 && y != 0) {
                                 r /= Math.sqrt(2);
@@ -1179,13 +1167,9 @@
                                 0,
                                 2 * Math.PI
                                 );
-                            if (selection.id && selection.id == highlightedSelectionId) {
-                                pc.fillStyle = readCssVar("selections-fill");
-                                pc.fill();
-                            }
                             pc.stroke();
                             pc.restore();
-                        /*}*/
+                        }
                     });
                 });
             }
@@ -1657,7 +1641,6 @@
 
         function highlightSelection(id) {
             highlightedSelectionId = id;
-            renderPrecisionHelper();
             renderWork();
         }
 
