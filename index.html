@@ -114,6 +114,11 @@
         h1 svg {
             height: 0.75em;
             margin: 0 -0.05em 0 0.05em;
+            transition: transform 2s ease-out;
+        }
+        h1 svg:hover {
+            transition: transform 20s ease-in-out;
+            transform: rotate(3600deg);
         }
         span {
             font-size: 0.85em;
@@ -202,6 +207,10 @@
         .reset a:hover {
             background-color: var(--danger-color);
             color: var(--text-color);
+        }
+        .ceci-nest-pas-une-parametre,
+        .ceci-nest-pas-une-parametre:hover {
+            background-color: transparent;
         }
 
         /* ANOTHER IMAGE DROPPER */
@@ -554,7 +563,7 @@
             Drop or <a>select</a> another image…
         </div>
 
-        <span><strong>Usage:</strong> Provide an image, click and drag from a center point to make a selection, refine it with <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>+</kbd> <kbd>-</kbd>, then press <kbd>enter</kbd> to download the cropped result. <a href="javascript:showUsersGuide();">Learn more…</a></span>
+        <span><strong>Usage:</strong> Provide an image, click and drag from a center point to make a selection, refine it with <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>+</kbd> <kbd>-</kbd>, then press <kbd>enter</kbd> to download the cropped result. Rinse and repeat. <a href="javascript:showUsersGuide();">Learn more…</a></span>
 
         <section class="selections-table-container hidden">
             <hr>
@@ -581,7 +590,7 @@
         <hr>
 
         <label><input type="checkbox" class="show-selections-checkbox" data-default="yes" onclick="updateShowSelections(this);" checked> show selections</label>
-        <span>Shows previously selected circles, which is helpful for keeping track of what you've already done.</span>
+        <span>Shows <a href="javascript:showUsersGuide('ug-showselections');">previously selected</a> circles, which is helpful for keeping track of what you've already done.</span>
 
         <label>
             <input type="range" min="0.1" max="2.0" step="0.1" value="1.0" data-default="1.0" class="precision-helper-zoom-slider" oninput="adjustPrecisionHelperZoom(this)">
@@ -595,7 +604,7 @@
         <span>Uncheck this if you prefer downloading your images through the table above <em>after</em> making a bunch of selections.</span>
 
         <input type="text" class="filename-template-field" data-default="" placeholder="FILENAME TEMPLATE" value="" oninput="updateFilenameTemplate(this)">
-        <span>Template for the filenames of result images (but don't specify the file extension, it's added automatically). You can look up the list of template variables <a href="javascript:showUsersGuide('ug-filename');">in the user's guide</a>. If left empty, the default "cropcircles-x{x}y{y}r{r}" (or "cropcircles-{lat},{lon},{rm}m-x{x}y{y}r{r}" if the current image <a href="javascript:showUsersGuide('ug-geoawareness');">has associated geo data</a>) will be used.</span>
+        <span>Template for the filenames of result images (but don't specify the file extension, it's added automatically). You can look up the list of template variables <a href="javascript:showUsersGuide('ug-filename');">in the user's guide</a>. If left empty, a <a href="javascript:showUsersGuide('ug-filename');">reasonable default</a> will be used.</span>
 
         <hr>
 
@@ -618,7 +627,7 @@
                 horizontal margin
             </label>
             <span>Analogous to the vertical margin, but towards the left and right.</span>
-            <label>
+            <label class="ceci-nest-pas-une-parametre">
                 <b class="aspect-ratio">1:1</b>
                 aspect ratio
             </label>
@@ -825,8 +834,8 @@
 
         <p>The settings in the sidebar are tersely explained in-place. Here's some more words about them.</p>
 
-        <h3>Show old selections</h3>
-        <p>If enabled (which is the default), your previously selected circles, which is helpful for keeping track of what you've already done.</p>
+        <h3 id="ug-showselections">Show selections</h3>
+        <p>If enabled (which is the default), your previously selected circles are visible in the main work area, which is helpful for keeping track of what you've already done. If the current image has <a href="javascript:showUsersGuide('ug-geoawareness');">associated geo data</a>, selections you've previously made in other images that fall into the geographical area covered by the current image will show up, too.</p>
 
         <h3>Precision helper zoom</h3>
         <p>Adjusts the zoom level of the thumbnails shown in the precision helper in the bottom right. At 1×, the image pixels will be shown at original scale with regard to <em>logical</em> browser pixels – on a high-dpi or retina device, they will thus be scaled up with regard to <em>physical</em> pixels. This is by design.</p>
@@ -946,7 +955,8 @@
         <p>None of these bullet points fit well into the previous sections, so here they are:</p>
         <ul>
             <li>Check out <a href="https://github.com/doersino/aerialbot">ærialbot</a>, a Python-based tool that, while originally designed to run Twitter bots, can be used to download large-scale satellite maps of arbitrary areas. The sample image was obtained using ærialbot, for instance.</li>
-            <li>Keep the images you "upload" below 50 megapixels – things get sluggish fast if you shoot past this limit. Then again, I've developed and tested this tool using a 5-year-old laptop, and I have a horrendous habit of having way too much stuff burning CPU cycles in the background, so your mileage may vary.</li>
+            <li>Keep the images you "upload" below 50 megapixels – things get sluggish fast if you shoot past this limit. Then again, I've developed and tested this tool using a 5-year-old laptop, and I have a horrendous habit of keeping way too much stuff open in the background, burning CPU cycles that would otherwise be used by this tool, so your mileage may vary.</li>
+            <li>The sample video shown at the top of this user's guide was generated (based on selections made in a higher-resolution variant of the sample image) using the venerable <a href="https://ffmpeg.org">FFmpeg</a> utility, invoked as follows: ffmpeg -framerate 3 -pattern_type glob -i '*.jpg' -vf scale=1920:824 -pix_fmt yuv420p out.mp4</li>
             <li>If you have opinions about this tool, whether they range from the purest love to the esteem in which conservatives seem to hold epidemiology, <a href="https://github.com/doersino/cropcircles/issues/new">tell me about them</a>! Any constructive feedback will probably be implemented swiftly unless that'd be too much work.</li>
         </ul>
 
@@ -969,7 +979,7 @@
             <li>The sample image, from which all of the examples in this user's guide have been derived, has been downloaded from <a href="https://www.google.com/maps/place/42°18'48.7%22N+113°51'19.8%22W/@42.3135278,-113.8576887,6000m/">Google Maps</a> using <a href="https://github.com/doersino/aerialbot">ærialbot</a>.</li>
             <li>The same <a href="https://www.google.com/maps/place/43°37'03.8%22N+113°24'21.7%22W/@43.6154232,-113.4144375,2892m/">goes</a> for the logo background image, which has additionally been edited and optimized with Adobe Photoshop CS6.</li>
             <li>All of the code was written in <a href="https://www.sublimetext.com">Sublime Text</a>, the <a href="https://git-scm.com">Git</a> commits were almost exclusively authored in <a href="https://www.sublimemerge.com">Sublime Merge</a>, and testing was primarily carried out in Safari on macOS Mojave.</li>
-            <li>Black Lives Matter. (That's not as unrelated as you might think: Black slaves were forced to do farm work, which enriched white land owners, many of which surely later used portions of that money to install the center pivot irrigation systems this tool was inspired by.)</li>
+            <li><em>Black Lives Matter.</em> That's not as unrelated as you might think: Black slaves were forced to do farm work, which enriched white land owners, many of which surely later used portions of that money to install the center pivot irrigation systems this tool was inspired by.</li>
         </ul>
 
         <img src="assets/readme-collage-1.jpg">
