@@ -1893,9 +1893,9 @@
             document.getElementById("selection-count").innerText = selections.length + " selection" + ((selections.length != 1) ? "s" : "");
 
             if (selections.length < 2) {
-                document.querySelector(".download-all").style.display = "none";
+                document.querySelector(".download-all-container").style.display = "none";
             } else {
-                document.querySelector(".download-all").style.display = "flex";
+                document.querySelector(".download-all-container").style.display = "block";
             }
 
             if (selections.length == 0 && relevantGeoSelections.length == 0) {
