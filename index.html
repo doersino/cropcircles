@@ -296,6 +296,22 @@
         .selections-table .delete:hover {
             color: var(--danger-color);
         }
+        .download-all {
+            display: flex;
+            margin: 1em 0 0.3em 0;
+        }
+        .download-all button {
+            margin: 0;
+        }
+        .download-all button:first-child {
+            display: inline-block;
+            width: 29em;
+        }
+        .download-all button:last-child {
+            display: inline-block;
+            width: 100%;
+            margin-left: 0.5em;
+        }
 
         /* USER'S GUIDE */
         .users-guide {
@@ -571,7 +587,7 @@
         <section class="selections-table-container hidden">
             <hr>
 
-            <p><span>The following reverse-chronological table lists your selections within this image, enabling redownloading (with different settings, say) and deletion.</span></p>
+            <p><span>The following reverse-chronological table lists your <strong id="selection-count">0 selections</strong> in this image, enabling redownloading (with different settings, say) and deletion.</span></p>
 
             <table class="selections-table">
                 <thead>
@@ -587,7 +603,13 @@
                 </tr>
             </table>
 
-            <button onclick="downloadZip();">download all <strong id="selection-count">0</strong> as zip</button>
+            <div class="download-all-container">
+                <div class="download-all">
+                    <button onclick="downloadAll();">download all</button>
+                    <button onclick="downloadZip();">…as zip</button>
+                </div>
+                <span>If you've made many selections in a massive image, zipping can be slower than just plain downloading all, but that, in turn, doesn't work in Safari.</span>
+            </div>
         </section>
 
         <hr>
@@ -750,7 +772,7 @@
 
         <p>The <em>selections table</em> lists the selections you've made in the current image (plus, if it has <a href="javascript:showUsersGuide('ug-geoawareness');">associated geo data</a>, any selections you've made in other images that fall into the geographical area covered by the image). Hovering over a selection in the table highlights it in the main work area. Using the buttons in right-most column of the table, you can (re)download or delete a specific selection, or "accept" a selection you've previously made in another image that is located in the geographical area covered by the current image – this will copy it into the main part of the selections table (if you delete such a selection, it returns to the "geo suggestions" section at the bottom of the table).</p>
         <p>Recall that that the selections you've made in the current image are kept in the <a href="javascript:showUsersGuide('ug-selection-cache');">selection cache</a>, so this table will be restored if you work on another image, then select this one again.</p>
-        <p>A button below the table allows you to download all selections in a single ZIP file. Note that if you have made more than a few selections that cover a large area (say, 1 megapixel each), zipping can be slower than downloading them all individually – that seems to be a limitation of the <a href="https://github.com/Stuk/jszip/">JSZip</a> library.</p>
+        <p>A pair of buttons below the table allows you to download all selections: Either sequentially, which I sadly haven't gotten to work reliably in Safari (only in Chrome and Firefox), or in a single ZIP file. Note that if you have made more than a few selections that cover a large area (say, 1 megapixel each), zipping can be slower than downloading them all individually or sequentially – that seems to be a limitation of the <a href="https://github.com/Stuk/jszip/">JSZip</a> library.</p>
 
         <h3 id="ug-precisionhelper">Precision helper</h3>
         <p>Below the sidebar, the <em>precision helper</em> aids you in hitting your marks when making a selection. It's divided into nine areas:</p>
@@ -1505,6 +1527,7 @@
                 recoverSelectionsFromSelectionCache();
                 extractRelevantGeoSelectionsFromSelectionCache();
                 renderWork();
+                renderPrecisionHelper();  // clear it in case there was a currentSelection in the previous image
             });
             image.setAttribute("src", src);
         }
@@ -1867,12 +1890,12 @@
         }
 
         function updateDownloadButtonAndTablePlaceholder() {
-            document.getElementById("selection-count").innerText = selections.length;
+            document.getElementById("selection-count").innerText = selections.length + " selection" + ((selections.length != 1) ? "s" : "");
 
             if (selections.length < 2) {
-                document.getElementById("selection-count").parentNode.style.display = "none";
+                document.querySelector(".download-all").style.display = "none";
             } else {
-                document.getElementById("selection-count").parentNode.style.display = "block";
+                document.querySelector(".download-all").style.display = "flex";
             }
 
             if (selections.length == 0 && relevantGeoSelections.length == 0) {
@@ -2011,11 +2034,25 @@
             setStatus("Cropping image and preparing for download…", true);
             cropAndPrepareBlob(id, (filename, blob) => {
                 let url = URL.createObjectURL(blob);
-                download(url, filename)
+                download(url, filename);
                 URL.revokeObjectURL(url);
 
                 clearStatus();
             });
+        }
+
+        async function downloadAll() {
+            setStatus("Cropping images and downloading them sequentially – this might take a while…", true);
+
+            // this works brilliantly in chrome and firefox, but safari only ever downloads the last image – even with trying various delays, i couldn't get it to reliably download all
+            selections.forEach(sel => {
+                cropAndPrepareBlob(sel.id, (filename, blob) => {
+                    let url = URL.createObjectURL(blob);
+                    download(url, filename);
+                    URL.revokeObjectURL(url);
+                });
+            });
+            clearStatus();
         }
 
         async function downloadZip() {
