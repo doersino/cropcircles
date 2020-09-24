@@ -618,7 +618,7 @@
         <span>Shows <a href="javascript:showUsersGuide('ug-showselections');">previously selected</a> circles, which is helpful for keeping track of what you've already done.</span>
 
         <label>
-            <input type="range" min="0.1" max="2.0" step="0.1" value="1.0" data-default="1.0" class="precision-helper-zoom-slider" oninput="adjustPrecisionHelperZoom(this)">
+            <input type="range" min="0.1" max="2.0" step="0.1" value="1.0" data-default="1.0" class="precision-helper-zoom-slider" oninput="adjustPrecisionHelperZoom(this);">
             <br>
             <b>1.0×</b>
             precision helper zoom
@@ -628,7 +628,7 @@
         <label><input type="checkbox" class="download-immediately-checkbox" data-default="yes" onclick="updateDownloadImmediately(this);" checked> download immediately</label>
         <span>Uncheck this if you prefer downloading your images through the table above <em>after</em> making a bunch of selections.</span>
 
-        <input type="text" class="filename-template-field" data-default="" placeholder="FILENAME TEMPLATE" value="" oninput="updateFilenameTemplate(this)">
+        <input type="text" class="filename-template-field" data-default="" placeholder="FILENAME TEMPLATE" value="" oninput="updateFilenameTemplate(this);">
         <span>Template for the filenames of result images (but don't specify the file extension, it's added automatically). You can look up the list of template variables <a href="javascript:showUsersGuide('ug-filename');">in the user's guide</a>. If left empty, a <a href="javascript:showUsersGuide('ug-filename');">reasonable default</a> will be used.</span>
 
         <hr>
@@ -638,7 +638,7 @@
 
         <section class="margin-settings disabled">
             <label>
-                <input type="range" min="0.0" max="4.0" step="0.1" value="0.0" data-default="0.0" class="vertical-margin-slider" oninput="adjustVerticalMargin(this)" disabled>
+                <input type="range" min="0.0" max="4.0" step="0.1" value="0.0" data-default="0.0" class="vertical-margin-slider" oninput="adjustVerticalMargin(this);" disabled>
                 <br>
                 <b>0·<em>r</em></b>
                 vertical margin
@@ -646,17 +646,26 @@
             <span>Above and below the circular core of the selection, include a vertical margin expressed as a fraction of the selection radius <em>r</em>.</span>
 
             <label>
-                <input type="range" min="0.0" max="4.0" step="0.1" value="0.0" data-default="0.0" class="horizontal-margin-slider" oninput="adjustHorizontalMargin(this)" disabled>
+                <input type="range" min="0.0" max="4.0" step="0.1" value="0.0" data-default="0.0" class="horizontal-margin-slider" oninput="adjustHorizontalMargin(this);" disabled>
                 <br>
                 <b>0·<em>r</em></b>
                 horizontal margin
             </label>
             <span>Analogous to the vertical margin, but towards the left and right.</span>
+
             <label class="ceci-nest-pas-une-parametre">
                 <b class="aspect-ratio">1:1</b>
                 aspect ratio
             </label>
             <span>Your settings result in the aspect ratio shown above.</span>
+
+            <label>
+                <input type="range" min="0" max="100" step="1" value="100" data-default="100" class="image-quality-slider" oninput="adjustImageQuality(this);" disabled>
+                <br>
+                <b>100%</b>
+                image quality
+            </label>
+            <span>If the background doesn't need to be transparent, JPEG compression will be used – here, you can adjust the <a href="javascript:showUsersGuide('ug-imagequality');">level of compression</a>. Set this to 0 if you prefer PNG.</span>
         </section>
 
         <hr>
@@ -927,7 +936,7 @@
 
         <h3 id="ug-transparentbackground">Transparent background</h3>
         <p>If you leave this checkbox enabled, downloading your selections will yield PNG images with transparent corners: anything outside the bounds of the circular selections will be removed (like each of the three little center pivot irrigation farms in-between the sections of this user's guide).</p>
-        <p>On the other hand, if you choose to uncheck this checkbox, the <em>surroundings</em> of the circular selections will be visible in the corners of the final images – essentially, this turns the selection into a square. This square can be expanded into a rectangle that includes even more of the circular selection's surroundings through the following two settings. Since this removes the need for transparency, the images are downloaded as more space-efficient JPG files. The encoding quality is set at 100%, making this effectively as lossless as PNG.</p>
+        <p>On the other hand, if you choose to uncheck this checkbox, the <em>surroundings</em> of the circular selections will be visible in the corners of the final images – essentially, this turns the selection into a square. This square can be expanded into a rectangle that includes even more of the circular selection's surroundings through the following two settings. Since this removes the need for transparency, the images are downloaded as more space-efficient JPG files by default. The encoding quality is preset at 100%, making this effectively as lossless as PNG – but you can <a href="showUsersGuide('ug-imagequality');">reduce the quality</a> if you want to save space.</p>
         <p>This functionality comes in handy for making a video like the one at the top of this user's guide, where different circular objects are shown in one place, with mainly their surroundings changing.</p>
         <p>If enabled, you'll notice a box-shaped dashed line around the current (or highlighted) selection – that's just a preview of the crop area.</p>
 
@@ -937,6 +946,10 @@
         <h3>Horizontal margin</h3>
         <p>Analogous to the vertical margin, but towards the left and right.</p>
         <p>Together, these two sliders allow you to dial in the range of surroundings to include in the images: For the example video included at the beginning of this document, the vertical margin was set to 0.2 and the horizontal margin to 1.8, yielding an aspect ratio (as shown below the two sliders) of 1:2.33 (i.e. <a href="https://en.wikipedia.org/wiki/CinemaScope">cinemascope</a>).</p>
+
+        <h3 id="ug-imagequality">Image quality</h3>
+        <p>If the background doesn't need to be transparent, JPEG compression will be used – in contrast to PNG, it's lossy but significantly more space-efficient. Using this slider, you can adjust the level of compression: 100% is effectively lossless, 90% is still pretty good, anything below 70% only really works for images that won't ever be shown at their actual size.</p>
+        <p>If you want this tool to generate PNG images regardless, simply set this to 0.</p>
 
         <p class="separator"></p>
 
@@ -2020,8 +2033,9 @@
             let imageType = "image/png";
             let imageQuality = 1;
             let imageExtension = ".png";
-            if (!settings.transparentBackground) {
+            if (!settings.transparentBackground && settings.imageQuality != 0) {
                 imageType = "image/jpeg";
+                imageQuality = settings.imageQuality / 100;
                 imageExtension = ".jpg";
             }
 
@@ -2205,7 +2219,8 @@
             filenameTemplate: null,
             transparentBackground: null,
             verticalMargin: null,
-            horizontalMargin: null
+            horizontalMargin: null,
+            imageQuality: null
         }
 
         let showSelectionsCheckbox = document.querySelector(".show-selections-checkbox");
@@ -2217,6 +2232,7 @@
         let marginSettings = document.querySelector(".margin-settings");
         let verticalMarginSlider = document.querySelector(".vertical-margin-slider");
         let horizontalMarginSlider = document.querySelector(".horizontal-margin-slider");
+        let imageQualitySlider = document.querySelector(".image-quality-slider");
 
         function initSettingsFromLocalStorage() {
             let s = window.localStorage.getItem("cropcircles-settings");
@@ -2253,6 +2269,9 @@
 
             horizontalMarginSlider.value = settings.horizontalMargin;
             adjustHorizontalMargin(horizontalMarginSlider);
+
+            imageQualitySlider.value = settings.imageQuality;
+            adjustImageQuality(imageQualitySlider);
         }
 
         function setupSettings() {
@@ -2330,6 +2349,8 @@
             adjustVerticalMargin(verticalMarginSlider);
             horizontalMarginSlider.value = horizontalMarginSlider.getAttribute("data-default");
             adjustHorizontalMargin(horizontalMarginSlider);
+            imageQualitySlider.value = imageQualitySlider.getAttribute("data-default");
+            adjustImageQuality(imageQualitySlider);
 
             if (!quietly) {
                 setStatus("Successfully reset the settings to their default values.");
@@ -2366,10 +2387,12 @@
                 marginSettings.classList.add("disabled");
                 verticalMarginSlider.disabled = true;
                 horizontalMarginSlider.disabled = true;
+                imageQualitySlider.disabled = true;
             } else {
                 marginSettings.classList.remove("disabled");
                 verticalMarginSlider.disabled = false;
                 horizontalMarginSlider.disabled = false;
+                imageQualitySlider.disabled = false;
             }
             renderWork();
         }
@@ -2407,6 +2430,16 @@
             document.querySelector(".aspect-ratio").innerText = computeAspectRatio();
             writeSettingsToLocalStorage();
             renderWork();
+        }
+
+        function adjustImageQuality(slider) {
+            settings.imageQuality = parseInt(slider.value);
+            if (settings.imageQuality == 0) {
+                imageQualitySlider.parentNode.querySelector("b").innerHTML = "PNG";
+            } else {
+                imageQualitySlider.parentNode.querySelector("b").innerHTML = settings.imageQuality + "%";
+            }
+            writeSettingsToLocalStorage();
         }
 
 
