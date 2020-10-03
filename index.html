@@ -787,7 +787,7 @@
         <p>Below the sidebar, the <em>precision helper</em> aids you in hitting your marks when making a selection. It's divided into nine areas:</p>
         <ul>
             <li>The central square shows the central portion of the selection. A crosshairs trained on the very center pixel helps with alignment. Another line protrudes from the middle of each of the sides of this square, this is mostly just handy when working on images of center pivot irrigation farms.</li>
-            <li>The four squares right above, below, right, and left of the central square show the areas of the image near the top, bottom, right, and left selection boundaries.</li>
+            <li>The four squares right above, below, right, and left of the central square show the areas of the image near the top, bottom, right, and left selection boundaries. The bottom one additionally informs you about the selection radius.</li>
             <li>The corner squares show the areas of the image at the 1:30, 4:30, 7:30, and 10:30 positions with regard to the selection.</li>
         </ul>
 
@@ -1220,6 +1220,12 @@
                         }
                     });
                 });
+
+                // show selection radius
+                pc.fillStyle = readCssVar("current-selection-stroke");
+                pc.font = H/24 + "px" + readCssVar("font-stack");
+                pc.textAlign = "center";
+                pc.fillText(parseInt(currentSelection.r) + "px", W/2, 5*H/6+H/24+H/100);
             }
 
             // borders: two on each axis
