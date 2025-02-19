@@ -2,7 +2,7 @@
 
 <img src="assets/favicon.png" width="150" align="right">
 
-*Crop Circles* is a purely-client-side [web app](https://doersino.github.io/cropcircles/) originally designed for accurately **cropping circular [center pivot irrigation](https://en.wikipedia.org/wiki/Center_pivot_irrigation) fields from aerial imagery** (collected with, for example, [ærialbot](https://github.com/doersino/aerialbot)), enabling the creation of a [series of videos](https://www.youtube.com/playlist?list=PLTphPoE54a1s_ZdCkGwbhQO9O5SMSitA1).
+*Crop Circles* is a purely-client-side [web app](https://ghpages.noahdoersing.com/cropcircles/) originally designed for accurately **cropping circular [center pivot irrigation](https://en.wikipedia.org/wiki/Center_pivot_irrigation) fields from aerial imagery** (collected with, for example, [ærialbot](https://github.com/doersino/aerialbot)), enabling the creation of a [series of videos](https://www.youtube.com/playlist?list=PLTphPoE54a1s_ZdCkGwbhQO9O5SMSitA1).
 
 But nothing's keeping you from using it to **crop circular objects from imagery-in-a-more-general-sense**!
 
@@ -17,7 +17,7 @@ Among other adjectives, it is...
 
 *For more details, **refer to the user's guide** – you can access it through the "Learn more..." link within the web app.*
 
-### Try it out here: https://doersino.github.io/cropcircles/
+### Try it out here: https://ghpages.noahdoersing.com/cropcircles/
 
 ![](assets/readme-screenshot.jpg)
 
